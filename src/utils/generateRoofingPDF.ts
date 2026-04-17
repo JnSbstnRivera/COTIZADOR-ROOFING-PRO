@@ -110,7 +110,7 @@ function drawCotizacionRoofing(
   text(page, 'ENERGY by Qcells', 9, M, height - 38, reg, ORANGE)
 
   if (logoImage) {
-    const lDims = logoImage.scale(0.70)
+    const lDims = logoImage.scale(0.22)
     const lx    = width - lDims.width - 20
     const ly    = height - headerH + Math.round((headerH - lDims.height) / 2)
     page.drawImage(logoImage, { x: lx, y: ly, width: lDims.width, height: lDims.height })
@@ -183,41 +183,49 @@ function drawCotizacionRoofing(
   })
 
   // Columna derecha: mapa
-  const mapX = M + leftW + 14
+  const mapX    = M + leftW + 14
   const mapColW = dataW - leftW - 14
   const mapTopY = secY - 4
-  const mapBoxH = detailRows.length * 22 + 4  // mismo alto que las filas
+  // Box proporcional a la imagen ArcGIS 500×320 (ratio 1.5625)
+  const mapBoxH = Math.round(mapColW / 1.5625)
+  const mapBotY = mapTopY - mapBoxH
 
   if (mapImage) {
-    // Escalar manteniendo proporcion dentro del box
-    const maxW = mapColW
-    const maxH = mapBoxH
-    const scaleX = maxW / mapImage.width
-    const scaleY = maxH / mapImage.height
-    const s = Math.min(scaleX, scaleY)
-    const mW = mapImage.width * s
+    // Escalar para LLENAR el box completo
+    const scaleX = mapColW / mapImage.width
+    const scaleY = mapBoxH / mapImage.height
+    const s  = Math.max(scaleX, scaleY)
+    const mW = mapImage.width  * s
     const mH = mapImage.height * s
-    const mX = mapX + (maxW - mW) / 2
-    const mY = mapTopY - maxH + (maxH - mH) / 2
+    const mX = mapX + (mapColW - mW) / 2
+    const mY = mapBotY + (mapBoxH - mH) / 2
 
-    // Borde del mapa
-    page.drawRectangle({
-      x: mapX - 1, y: mapTopY - mapBoxH - 1,
-      width: mapColW + 2, height: mapBoxH + 2,
-      borderColor: BORDER, borderWidth: 1,
-    })
     page.drawImage(mapImage, { x: mX, y: mY, width: mW, height: mH })
 
-    // Etiqueta "Ubicacion del Techo"
-    text(page, 'Ubicacion del Techo', 6.5, mapX + 4, mapTopY - mapBoxH - 10, bold, GRAY)
+    // Borde encima de la imagen
+    page.drawRectangle({
+      x: mapX, y: mapBotY,
+      width: mapColW, height: mapBoxH,
+      borderColor: BORDER, borderWidth: 1.2,
+    })
+
+    // Punto rojo de ubicacion en el centro
+    const dotX = mapX + mapColW / 2
+    const dotY = mapBotY + mapBoxH / 2
+    page.drawEllipse({ x: dotX, y: dotY, xScale: 7, yScale: 7, color: rgb(0.9, 0.1, 0.1) })
+    page.drawEllipse({ x: dotX, y: dotY, xScale: 3, yScale: 3, color: rgb(1, 1, 1) })
+
+    // Etiqueta
+    text(page, 'Ubicacion del Techo', 6.5, mapX + 4, mapBotY - 10, bold, GRAY)
   } else {
-    // Placeholder si no hay mapa
-    rect(page, mapX, mapTopY - mapBoxH, mapColW, mapBoxH, LIGHT)
-    text(page, 'Mapa no disponible', 8, mapX + 10, mapTopY - mapBoxH / 2, reg, GRAY)
+    rect(page, mapX, mapBotY, mapColW, mapBoxH, LIGHT)
+    text(page, 'Ingresa coordenadas para ver el mapa', 7, mapX + 8, mapBotY + mapBoxH / 2, reg, GRAY)
+    text(page, 'Ubicacion del Techo', 6.5, mapX + 4, mapBotY - 10, bold, GRAY)
   }
 
-  // ── Separador ──
-  const sep2Y = sy - 12
+  // Separador debajo del elemento más bajo (mapa o filas)
+  const sectionBotY = Math.min(sy, mapBotY)
+  const sep2Y = sectionBotY - 18
   page.drawLine({ start: { x: M, y: sep2Y }, end: { x: width - M, y: sep2Y }, thickness: 0.5, color: BORDER })
 
   // ── Sección: Planes de Sellado ──

@@ -567,7 +567,7 @@ export default function App() {
       const isDefault = lat === 18.2208 && lng === -66.5901;
       if (isDefault) return null;
       // ArcGIS satellite static export — misma fuente que el mapa del app
-      const delta = 0.0009;
+      const delta = 0.0003;
       const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
       const url = `https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&size=500,320&imageSR=96&format=png&transparent=false&f=image`;
       const res = await fetch(url);
