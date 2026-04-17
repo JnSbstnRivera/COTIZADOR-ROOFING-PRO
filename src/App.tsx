@@ -572,9 +572,9 @@ export default function App() {
         url = `https://server.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/export?bbox=-67.4,17.7,-65.5,18.7&bboxSR=4326&size=500,320&format=png&transparent=false&f=image`;
       } else {
         // Vista satelital centrada en las coordenadas del techo
-        const delta = 0.0003;
+        const delta = 0.0009;
         const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
-        url = `https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&size=500,320&imageSR=96&format=png&transparent=false&f=image`;
+        url = `https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&size=500,320&format=png&transparent=false&f=image`;
       }
 
       const res = await fetch(url);
