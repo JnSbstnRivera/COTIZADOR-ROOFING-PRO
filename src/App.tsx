@@ -561,18 +561,18 @@ export default function App() {
   }, [data]);
 
   const captureMap = async (): Promise<Uint8Array | null> => {
-    const mapEl = document.getElementById('map-capture-area');
-    if (!mapEl) return null;
     try {
-      const canvas = await html2canvas(mapEl, {
-        useCORS: true, allowTaint: true, scale: 1.5, backgroundColor: '#021933',
-      });
-      return new Promise(resolve => {
-        canvas.toBlob(blob => {
-          if (!blob) { resolve(null); return; }
-          blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
-        }, 'image/png');
-      });
+      const lat = parseFloat(coords.lat);
+      const lng = parseFloat(coords.lng);
+      const isDefault = lat === 18.2208 && lng === -66.5901;
+      if (isDefault) return null;
+      // ArcGIS satellite static export — misma fuente que el mapa del app
+      const delta = 0.0009;
+      const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
+      const url = `https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&size=500,320&imageSR=96&format=png&transparent=false&f=image`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return new Uint8Array(await res.arrayBuffer());
     } catch { return null; }
   };
 
