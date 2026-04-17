@@ -117,7 +117,7 @@ function drawCotizacionRoofing(
   text(page, 'ENERGY by Qcells', 9, M, height - 38, reg, ORANGE)
 
   if (logoImage) {
-    const lDims = logoImage.scale(0.28)
+    const lDims = logoImage.scale(0.34)
     const lx    = width - lDims.width - 20
     const ly    = height - headerH + Math.round((headerH - lDims.height) / 2)
     page.drawImage(logoImage, { x: lx, y: ly, width: lDims.width, height: lDims.height })
@@ -249,17 +249,17 @@ function drawCotizacionRoofing(
 
   const GREEN_CASH  = rgb(0.027, 0.455, 0.267)
   const EMERALD_BG  = rgb(0.878, 0.969, 0.922)
+  const HD_GRAY     = rgb(0.42, 0.44, 0.50)
   const rH = 18
 
   const mods = resumen.modalidades.length > 0 ? resumen.modalidades : ['cash']
 
   mods.forEach((mod, mIdx) => {
-    if (mIdx > 0) tableY -= 8
+    if (mIdx > 0) tableY -= 10
 
     if (mod === 'cash') {
-      // título de sección
       text(page, 'Modalidad CASH  (descuento 10%)', 9, M, tableY, bold, GREEN_CASH)
-      tableY -= 14
+      tableY -= 22
       const c0 = M + 6, c1 = M + 108, c2 = M + 248, c3 = M + 368
       rect(page, M, tableY - 3, dataW, rH, GREEN_CASH)
       text(page, 'Plan',              7, c0, tableY + 5, bold, WHITE)
@@ -281,7 +281,7 @@ function drawCotizacionRoofing(
 
     if (mod === 'wh_financial') {
       text(page, 'Modalidad WH Financial', 9, M, tableY, bold, BLUE)
-      tableY -= 14
+      tableY -= 22
       const c0 = M + 6, c1 = M + 108, c2 = M + 238, c3 = M + 368
       rect(page, M, tableY - 3, dataW, rH, NAVY)
       text(page, 'Plan',                  7, c0, tableY + 5, bold, WHITE)
@@ -303,9 +303,9 @@ function drawCotizacionRoofing(
 
     if (mod === 'home_depot') {
       text(page, 'Modalidad Home Depot', 9, M, tableY, bold, BLUE)
-      tableY -= 14
+      tableY -= 22
       const c0 = M + 6, c1 = M + 128, c2 = M + 340
-      rect(page, M, tableY - 3, dataW, rH, NAVY)
+      rect(page, M, tableY - 3, dataW, rH, HD_GRAY)
       text(page, 'Plan',               7, c0, tableY + 5, bold, WHITE)
       text(page, 'Valor con IVU',      7, c1, tableY + 5, bold, WHITE)
       text(page, 'Valor antes de IVU', 7, c2, tableY + 5, bold, WHITE)
@@ -354,7 +354,7 @@ function drawCotizacionRoofing(
   rect(page, 0, 0, 4, footerH, ORANGE)
 
   if (logoImage) {
-    const fD = logoImage.scale(0.22)
+    const fD = logoImage.scale(0.28)
     const fY = Math.round((footerH - fD.height) / 2)
     page.drawImage(logoImage, { x: 14, y: fY, width: fD.width, height: fD.height })
   }
