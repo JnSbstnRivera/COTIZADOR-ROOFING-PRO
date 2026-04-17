@@ -368,6 +368,7 @@ export default function App() {
   const [isExporting, setIsExporting] = useState(false);
   const [pdfModalAbierto, setPdfModalAbierto] = useState(false);
   const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
+  const [modalidadesParaPDF, setModalidadesParaPDF] = useState<string[]>(['cash']);
 
   const calculatePolygonArea = (points: L.LatLng[]) => {
     if (points.length < 3) return 0;
@@ -591,15 +592,20 @@ export default function App() {
       data.firmaYGana ? 'Firma y Gana (-$500)' : null,
       data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
     ].filter(Boolean).join(', ') || 'Ninguno',
+    modalidades: modalidadesParaPDF,
     planes: calculations
       .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
       .map(p => ({
-        nombre: p.name,
-        mensual5:  p.monthly60,
-        mensual7:  p.monthly84,
-        mensual10: p.monthly120,
-        cashTotal: p.cashTotalConIvu,
-        financiado: p.cashBalance,
+        nombre:        p.name,
+        mensual5:      p.monthly60,
+        mensual7:      p.monthly84,
+        mensual10:     p.monthly120,
+        cashTotal:     p.cashTotalConIvu,
+        cashSinIvu:    p.cashValorSinIvu,
+        cashIvu:       p.cashIvu,
+        valorConIvu:   p.cashBalance,
+        valorAntesIvu: p.baseBalance,
+        financiado:    p.cashBalance,
       })),
   };
 
@@ -1264,6 +1270,9 @@ export default function App() {
         planes={['Silver', 'Gold', 'Platinum']}
         planesSeleccionados={planesParaPDF}
         onPlanesChange={setPlanesParaPDF}
+        modalidades={['cash', 'wh_financial', 'home_depot']}
+        modalidadesSeleccionadas={modalidadesParaPDF}
+        onModalidadesChange={setModalidadesParaPDF}
       />
     </>
   );

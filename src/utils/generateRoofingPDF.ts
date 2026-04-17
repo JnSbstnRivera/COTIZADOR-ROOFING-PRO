@@ -20,12 +20,17 @@ export interface RoofingResumen {
   removalPct: number
   pronto: number
   descuentos: string
+  modalidades: string[]   // 'cash' | 'wh_financial' | 'home_depot'
   planes: {
-    nombre: string   // 'SILVER' | 'GOLD' | 'PLATINUM'
+    nombre: string        // 'SILVER' | 'GOLD' | 'PLATINUM'
     mensual5: number
     mensual7: number
     mensual10: number
-    cashTotal: number
+    cashTotal: number     // Total con IVU (verde cash)
+    cashSinIvu: number    // Sin IVU (verde cash)
+    cashIvu: number       // IVU amount (verde cash)
+    valorConIvu: number   // Valor con IVU negro (Home Depot)
+    valorAntesIvu: number // Valor antes de IVU negro (Home Depot)
     financiado: number
   }[]
 }
@@ -112,7 +117,7 @@ function drawCotizacionRoofing(
   text(page, 'ENERGY by Qcells', 9, M, height - 38, reg, ORANGE)
 
   if (logoImage) {
-    const lDims = logoImage.scale(0.22)
+    const lDims = logoImage.scale(0.28)
     const lx    = width - lDims.width - 20
     const ly    = height - headerH + Math.round((headerH - lDims.height) / 2)
     page.drawImage(logoImage, { x: lx, y: ly, width: lDims.width, height: lDims.height })
@@ -232,70 +237,115 @@ function drawCotizacionRoofing(
   const sep2Y = sectionBotY - 18
   page.drawLine({ start: { x: M, y: sep2Y }, end: { x: width - M, y: sep2Y }, thickness: 0.5, color: BORDER })
 
-  // ── Sección: Planes de Sellado ──
+  // ── Sección: Modalidades de Cotizacion ──
   let tableY = sep2Y - 16
-  text(page, 'Planes de Sellado', 13, M, tableY, bold, BLUE)
+  text(page, 'Opciones de Cotizacion', 13, M, tableY, bold, BLUE)
   page.drawLine({
     start: { x: M, y: tableY - 5 },
-    end:   { x: M + 126, y: tableY - 5 },
+    end:   { x: M + 158, y: tableY - 5 },
     thickness: 2, color: ORANGE,
   })
   tableY -= 20
 
-  // Cabecera de tabla
-  const c0 = M + 6       // Plan
-  const c1 = M + 90      // 5 Años
-  const c2 = M + 200     // 7 Años
-  const c3 = M + 310     // 10 Años
-  const c4 = M + 420     // Cash
+  const GREEN_CASH  = rgb(0.027, 0.455, 0.267)
+  const EMERALD_BG  = rgb(0.878, 0.969, 0.922)
+  const rH = 18
 
-  rect(page, M, tableY - 4, dataW, 18, NAVY)
-  text(page, 'Plan',             7.5, c0, tableY + 3, bold, WHITE)
-  text(page, '5 Anos (5.99%)',   7.5, c1, tableY + 3, bold, WHITE)
-  text(page, '7 Anos (7.99%)',   7.5, c2, tableY + 3, bold, WHITE)
-  text(page, '10 Anos (9.99%)',  7.5, c3, tableY + 3, bold, WHITE)
-  text(page, 'Cash (10% desc)',  7.5, c4, tableY + 3, bold, WHITE)
-  tableY -= 22
+  const mods = resumen.modalidades.length > 0 ? resumen.modalidades : ['cash']
 
-  resumen.planes.forEach((plan, i) => {
-    const planColor = plan.nombre === 'SILVER' ? SILVER_COLOR
-      : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
+  mods.forEach((mod, mIdx) => {
+    if (mIdx > 0) tableY -= 8
 
-    if (i % 2 === 0) rect(page, M, tableY - 4, dataW, 18, LIGHT)
+    if (mod === 'cash') {
+      // título de sección
+      text(page, 'Modalidad CASH  (descuento 10%)', 9, M, tableY, bold, GREEN_CASH)
+      tableY -= 14
+      const c0 = M + 6, c1 = M + 108, c2 = M + 248, c3 = M + 368
+      rect(page, M, tableY - 3, dataW, rH, GREEN_CASH)
+      text(page, 'Plan',              7, c0, tableY + 5, bold, WHITE)
+      text(page, 'Total con IVU',     7, c1, tableY + 5, bold, WHITE)
+      text(page, 'Sin IVU',           7, c2, tableY + 5, bold, WHITE)
+      text(page, 'IVU (11.5%)',       7, c3, tableY + 5, bold, WHITE)
+      tableY -= rH + 2
+      resumen.planes.forEach((plan, i) => {
+        const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
+        if (i % 2 === 0) rect(page, M, tableY - 3, dataW, rH, EMERALD_BG)
+        rect(page, c0 - 2, tableY - 1, 52, 14, pc)
+        text(page, plan.nombre,             7, c0 + 1, tableY + 5, bold, WHITE)
+        text(page, `$${fmt(plan.cashTotal)}`,    8, c1, tableY + 4, bold, GREEN_CASH)
+        text(page, `$${fmt(plan.cashSinIvu)}`,   8, c2, tableY + 4, reg,  DARK)
+        text(page, `$${fmt(plan.cashIvu)}`,      8, c3, tableY + 4, reg,  DARK)
+        tableY -= rH + 2
+      })
+    }
 
-    // Badge de color por plan
-    rect(page, c0 - 2, tableY - 2, 52, 14, planColor)
-    text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
+    if (mod === 'wh_financial') {
+      text(page, 'Modalidad WH Financial', 9, M, tableY, bold, BLUE)
+      tableY -= 14
+      const c0 = M + 6, c1 = M + 108, c2 = M + 238, c3 = M + 368
+      rect(page, M, tableY - 3, dataW, rH, NAVY)
+      text(page, 'Plan',                  7, c0, tableY + 5, bold, WHITE)
+      text(page, '60 meses (5.99%)',      7, c1, tableY + 5, bold, WHITE)
+      text(page, '84 meses (7.99%)',      7, c2, tableY + 5, bold, WHITE)
+      text(page, '120 meses (9.99%)',     7, c3, tableY + 5, bold, WHITE)
+      tableY -= rH + 2
+      resumen.planes.forEach((plan, i) => {
+        const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
+        if (i % 2 === 0) rect(page, M, tableY - 3, dataW, rH, LIGHT)
+        rect(page, c0 - 2, tableY - 1, 52, 14, pc)
+        text(page, plan.nombre,             7, c0 + 1, tableY + 5, bold, WHITE)
+        text(page, `$${fmt(plan.mensual5)}`,  8, c1, tableY + 4, reg,  DARK)
+        text(page, `$${fmt(plan.mensual7)}`,  8, c2, tableY + 4, reg,  DARK)
+        text(page, `$${fmt(plan.mensual10)}`, 8, c3, tableY + 4, bold, DARK)
+        tableY -= rH + 2
+      })
+    }
 
-    text(page, `$${fmt(plan.mensual5)}`,  8, c1, tableY + 3, reg, DARK)
-    text(page, `$${fmt(plan.mensual7)}`,  8, c2, tableY + 3, reg, DARK)
-    text(page, `$${fmt(plan.mensual10)}`, 8, c3, tableY + 3, bold, DARK)
-    text(page, `$${fmt(plan.cashTotal)}`, 8, c4, tableY + 3, bold, DARK)
-    tableY -= 22
+    if (mod === 'home_depot') {
+      text(page, 'Modalidad Home Depot', 9, M, tableY, bold, BLUE)
+      tableY -= 14
+      const c0 = M + 6, c1 = M + 128, c2 = M + 340
+      rect(page, M, tableY - 3, dataW, rH, NAVY)
+      text(page, 'Plan',               7, c0, tableY + 5, bold, WHITE)
+      text(page, 'Valor con IVU',      7, c1, tableY + 5, bold, WHITE)
+      text(page, 'Valor antes de IVU', 7, c2, tableY + 5, bold, WHITE)
+      tableY -= rH + 2
+      resumen.planes.forEach((plan, i) => {
+        const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
+        if (i % 2 === 0) rect(page, M, tableY - 3, dataW, rH, LIGHT)
+        rect(page, c0 - 2, tableY - 1, 52, 14, pc)
+        text(page, plan.nombre,                  7, c0 + 1, tableY + 5, bold, WHITE)
+        text(page, `$${fmt(plan.valorConIvu)}`,   8, c1,    tableY + 4, bold, DARK)
+        text(page, `$${fmt(plan.valorAntesIvu)}`, 8, c2,    tableY + 4, reg,  DARK)
+        tableY -= rH + 2
+      })
+    }
   })
 
   text(page, '* Mensualidades estimadas sujetas a aprobacion de credito. Precios incluyen IVU.', 7, M + 4, tableY, reg, GRAY)
-  tableY -= 20
+  tableY -= 18
 
-  // ── CTA ──
-  text(page, 'Protege tu hogar con la mejor tecnologia de sellado.', 12, M, tableY, reg, BLUE)
-  text(page, 'Garantia. Calidad. Confianza.', 14, M, tableY - 18, bold, NAVY)
+  // ── CTA (solo si hay espacio suficiente) ──
+  if (tableY > 220) {
+    text(page, 'Protege tu hogar con la mejor tecnologia de sellado.', 12, M, tableY, reg, BLUE)
+    text(page, 'Garantia. Calidad. Confianza.', 14, M, tableY - 18, bold, NAVY)
 
-  const bY = tableY - 44
-  rect(page, M, bY - 5, 110, 22, NAVY)
-  text(page, 'WINDMAR ROOFING PRO', 7, M + 6, bY + 5, bold, WHITE)
+    const bY = tableY - 44
+    rect(page, M, bY - 5, 110, 22, NAVY)
+    text(page, 'WINDMAR ROOFING PRO', 7, M + 6, bY + 5, bold, WHITE)
 
-  const benY = tableY - 78
-  const benW = dataW / 3
-  const bens = ['Instalacion certificada', 'Garantia hasta 10 anos', 'Soporte 24/7']
-  bens.forEach((b, i) => {
-    text(page, b, 8, M + 4 + i * benW, benY, i === 2 ? bold : reg, i === 2 ? NAVY : GRAY)
-    if (i < 2) page.drawLine({
-      start: { x: M + (i + 1) * benW, y: benY + 12 },
-      end:   { x: M + (i + 1) * benW, y: benY - 8 },
-      thickness: 0.5, color: GRAY,
+    const benY = tableY - 78
+    const benW = dataW / 3
+    const bens = ['Instalacion certificada', 'Garantia hasta 10 anos', 'Soporte 24/7']
+    bens.forEach((b, i) => {
+      text(page, b, 8, M + 4 + i * benW, benY, i === 2 ? bold : reg, i === 2 ? NAVY : GRAY)
+      if (i < 2) page.drawLine({
+        start: { x: M + (i + 1) * benW, y: benY + 12 },
+        end:   { x: M + (i + 1) * benW, y: benY - 8 },
+        thickness: 0.5, color: GRAY,
+      })
     })
-  })
+  }
 
   // ── Footer ──
   const footerH = 104
@@ -304,7 +354,7 @@ function drawCotizacionRoofing(
   rect(page, 0, 0, 4, footerH, ORANGE)
 
   if (logoImage) {
-    const fD = logoImage.scale(0.28)
+    const fD = logoImage.scale(0.34)
     const fY = Math.round((footerH - fD.height) / 2)
     page.drawImage(logoImage, { x: 14, y: fY, width: fD.width, height: fD.height })
   }

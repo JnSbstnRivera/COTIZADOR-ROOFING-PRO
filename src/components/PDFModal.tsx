@@ -32,6 +32,10 @@ interface PDFModalProps {
   planes?: string[]
   planesSeleccionados?: string[]
   onPlanesChange?: (planes: string[]) => void
+  // Para ROOFING: selector múltiple de modalidad de compra
+  modalidades?: string[]
+  modalidadesSeleccionadas?: string[]
+  onModalidadesChange?: (m: string[]) => void
 }
 
 const TITULOS = {
@@ -66,10 +70,22 @@ function Field({
 }
 
 // ── componente ────────────────────────────────────────────────
+const MODALIDAD_LABELS: Record<string, string> = {
+  cash:         'CASH',
+  wh_financial: 'WH Financial',
+  home_depot:   'Home Depot',
+}
+const MODALIDAD_COLORS: Record<string, string> = {
+  cash:         '#059669',
+  wh_financial: '#0d2050',
+  home_depot:   '#f97316',
+}
+
 export function PDFModal({
   isOpen, onClose, tipo, resumen, onGenerate,
   plazos, plazoSeleccionado, onPlazoChange,
   planes, planesSeleccionados, onPlanesChange,
+  modalidades, modalidadesSeleccionadas, onModalidadesChange,
 }: PDFModalProps) {
 
   const [cliente, setCliente] = useState<ClienteData>({
@@ -232,6 +248,62 @@ export function PDFModal({
               {(planesSeleccionados?.length ?? 0) === 0 && (
                 <p style={{ fontSize: 11, color: '#e74c3c', marginTop: 6 }}>
                   Selecciona al menos un plan de sellado.
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* ── MODALIDAD DE COMPRA — solo ROOFING ── */}
+          {tipo === 'roofing' && modalidades && (
+            <section>
+              <div style={{
+                fontSize: 13, fontWeight: 700, color: '#1a56c4',
+                borderBottom: '2px solid #F89B24', paddingBottom: 4, marginBottom: 6,
+              }}>
+                Modalidad de Cotizacion
+              </div>
+              <p style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>
+                Selecciona una o mas modalidades de compra que incluira en el PDF.
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {modalidades.map(mod => {
+                  const selected = modalidadesSeleccionadas?.includes(mod)
+                  const color    = MODALIDAD_COLORS[mod] ?? '#1a56c4'
+                  const label    = MODALIDAD_LABELS[mod] ?? mod
+                  return (
+                    <button
+                      key={mod}
+                      onClick={() => {
+                        const curr = modalidadesSeleccionadas ?? []
+                        onModalidadesChange?.(
+                          selected ? curr.filter(m => m !== mod) : [...curr, mod]
+                        )
+                      }}
+                      style={{
+                        flex: 1, minWidth: 110, padding: '10px 8px',
+                        borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 700,
+                        border: `2px solid ${selected ? color : '#d0d9ef'}`,
+                        background: selected ? color : 'white',
+                        color: selected ? 'white' : '#333',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}
+                    >
+                      <span style={{
+                        width: 14, height: 14, borderRadius: 3, border: `2px solid ${selected ? 'white' : '#aaa'}`,
+                        background: selected ? 'rgba(255,255,255,0.3)' : 'transparent',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, color: 'white', flexShrink: 0,
+                      }}>
+                        {selected ? '✓' : ''}
+                      </span>
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+              {(modalidadesSeleccionadas?.length ?? 0) === 0 && (
+                <p style={{ fontSize: 11, color: '#e74c3c', marginTop: 6 }}>
+                  Selecciona al menos una modalidad de cotizacion.
                 </p>
               )}
             </section>
