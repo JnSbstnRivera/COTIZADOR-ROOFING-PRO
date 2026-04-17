@@ -560,19 +560,26 @@ export default function App() {
     });
   }, [data]);
 
-  const captureMap = async (): Promise<Uint8Array | null> => {
+  const captureMap = async (): Promise<{ bytes: Uint8Array; hasLocation: boolean } | null> => {
     try {
       const lat = parseFloat(coords.lat);
       const lng = parseFloat(coords.lng);
       const isDefault = lat === 18.2208 && lng === -66.5901;
-      if (isDefault) return null;
-      // ArcGIS satellite static export — misma fuente que el mapa del app
-      const delta = 0.0003;
-      const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
-      const url = `https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&size=500,320&imageSR=96&format=png&transparent=false&f=image`;
+
+      let url: string;
+      if (isDefault) {
+        // Vista general de Puerto Rico (mapa de calles)
+        url = `https://server.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/export?bbox=-67.4,17.7,-65.5,18.7&bboxSR=4326&size=500,320&format=png&transparent=false&f=image`;
+      } else {
+        // Vista satelital centrada en las coordenadas del techo
+        const delta = 0.0003;
+        const bbox = `${lng - delta},${lat - delta},${lng + delta},${lat + delta}`;
+        url = `https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&size=500,320&imageSR=96&format=png&transparent=false&f=image`;
+      }
+
       const res = await fetch(url);
       if (!res.ok) return null;
-      return new Uint8Array(await res.arrayBuffer());
+      return { bytes: new Uint8Array(await res.arrayBuffer()), hasLocation: !isDefault };
     } catch { return null; }
   };
 
@@ -597,8 +604,8 @@ export default function App() {
   };
 
   const handleGenerateRoofingPDF = async (cliente: ClienteData, consultor: ConsultorData) => {
-    const mapBytes = await captureMap();
-    await generateRoofingPDF(cliente, consultor, roofingResumen, mapBytes);
+    const result = await captureMap();
+    await generateRoofingPDF(cliente, consultor, roofingResumen, result?.bytes ?? null, result?.hasLocation ?? false);
   };
 
   return (

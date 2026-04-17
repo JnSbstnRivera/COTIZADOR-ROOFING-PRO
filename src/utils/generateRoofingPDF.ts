@@ -35,6 +35,7 @@ export async function generateRoofingPDF(
   consultor: ConsultorData,
   resumen: RoofingResumen,
   mapImageBytes?: Uint8Array | null,
+  showLocationDot?: boolean,
 ) {
   const res = await fetch('/roofing-modelo.pdf')
   if (!res.ok) throw new Error('No se pudo cargar el PDF modelo')
@@ -74,7 +75,7 @@ export async function generateRoofingPDF(
   const { width, height } = originalDoc.getPages()[0].getSize()
   const newPage = outputDoc.addPage([width, height])
   drawCotizacionRoofing(newPage, { width, height }, boldFont, regFont,
-    cliente, consultor, resumen, logoImage, mapImage)
+    cliente, consultor, resumen, logoImage, mapImage, showLocationDot)
 
   if (INSERT_AT < totalOrig) {
     const after = await outputDoc.copyPages(originalDoc, range(INSERT_AT, totalOrig))
@@ -95,6 +96,7 @@ function drawCotizacionRoofing(
   resumen: RoofingResumen,
   logoImage: any = null,
   mapImage: any = null,
+  showLocationDot: boolean = false,
 ) {
   const M     = 36
   const dataW = width - M * 2
@@ -209,11 +211,13 @@ function drawCotizacionRoofing(
       borderColor: BORDER, borderWidth: 1.2,
     })
 
-    // Punto rojo de ubicacion en el centro
-    const dotX = mapX + mapColW / 2
-    const dotY = mapBotY + mapBoxH / 2
-    page.drawEllipse({ x: dotX, y: dotY, xScale: 7, yScale: 7, color: rgb(0.9, 0.1, 0.1) })
-    page.drawEllipse({ x: dotX, y: dotY, xScale: 3, yScale: 3, color: rgb(1, 1, 1) })
+    // Punto rojo de ubicacion en el centro (solo cuando hay coordenadas reales)
+    if (showLocationDot) {
+      const dotX = mapX + mapColW / 2
+      const dotY = mapBotY + mapBoxH / 2
+      page.drawEllipse({ x: dotX, y: dotY, xScale: 7, yScale: 7, color: rgb(0.9, 0.1, 0.1) })
+      page.drawEllipse({ x: dotX, y: dotY, xScale: 3, yScale: 3, color: rgb(1, 1, 1) })
+    }
 
     // Etiqueta
     text(page, 'Ubicacion del Techo', 6.5, mapX + 4, mapBotY - 10, bold, GRAY)
