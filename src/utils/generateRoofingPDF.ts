@@ -110,7 +110,7 @@ function drawCotizacionRoofing(
   text(page, 'ENERGY by Qcells', 10, M, height - 67, reg, ORANGE)
 
   if (logoImage) {
-    const lDims = logoImage.scale(0.28)
+    const lDims = logoImage.scale(0.46)
     const lx    = width - lDims.width - 20
     const ly    = height - headerH + Math.round((headerH - lDims.height) / 2)
     page.drawImage(logoImage, { x: lx, y: ly, width: lDims.width, height: lDims.height })
