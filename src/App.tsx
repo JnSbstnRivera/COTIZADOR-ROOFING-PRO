@@ -30,6 +30,8 @@ import {
   X
 } from 'lucide-react';
 import { PLANS, CONSTANTS, QuoteData, Plan } from './types';
+import { PDFModal, type ClienteData, type ConsultorData } from './components/PDFModal';
+import { generateRoofingPDF } from './utils/generateRoofingPDF';
 
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Polygon, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -364,6 +366,8 @@ export default function App() {
   const [manualArea, setManualArea] = useState<number>(0);
   const [mapLayer, setMapLayer] = useState<'satellite' | 'streets'>('satellite');
   const [isExporting, setIsExporting] = useState(false);
+  const [pdfModalAbierto, setPdfModalAbierto] = useState(false);
+  const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
 
   const calculatePolygonArea = (points: L.LatLng[]) => {
     if (points.length < 3) return 0;
@@ -556,6 +560,47 @@ export default function App() {
     });
   }, [data]);
 
+  const captureMap = async (): Promise<Uint8Array | null> => {
+    const mapEl = document.getElementById('map-capture-area');
+    if (!mapEl) return null;
+    try {
+      const canvas = await html2canvas(mapEl, {
+        useCORS: true, allowTaint: true, scale: 1.5, backgroundColor: '#021933',
+      });
+      return new Promise(resolve => {
+        canvas.toBlob(blob => {
+          if (!blob) { resolve(null); return; }
+          blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+        }, 'image/png');
+      });
+    } catch { return null; }
+  };
+
+  const roofingResumen = {
+    sqft: data.sqft,
+    removalPct: data.removalPercentage,
+    pronto: data.downPayment,
+    descuentos: [
+      data.firmaYGana ? 'Firma y Gana (-$500)' : null,
+      data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
+    ].filter(Boolean).join(', ') || 'Ninguno',
+    planes: calculations
+      .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
+      .map(p => ({
+        nombre: p.name,
+        mensual5:  p.monthly60,
+        mensual7:  p.monthly84,
+        mensual10: p.monthly120,
+        cashTotal: p.cashTotalConIvu,
+        financiado: p.cashBalance,
+      })),
+  };
+
+  const handleGenerateRoofingPDF = async (cliente: ClienteData, consultor: ConsultorData) => {
+    const mapBytes = await captureMap();
+    await generateRoofingPDF(cliente, consultor, roofingResumen, mapBytes);
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -607,6 +652,15 @@ export default function App() {
                       <h2 className="font-black text-slate-900 text-lg uppercase tracking-widest">COTIZADOR ROOFING PRO</h2>
                     </div>
                   </div>
+                  {data.sqft > 0 && (
+                    <button
+                      onClick={() => setPdfModalAbierto(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0d2050] text-white text-xs font-black hover:bg-[#1a56c4] transition-colors shadow-md"
+                    >
+                      <FileSpreadsheet size={15} />
+                      Descargar PDF
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
@@ -1188,6 +1242,22 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <PDFModal
+        isOpen={pdfModalAbierto}
+        onClose={() => setPdfModalAbierto(false)}
+        tipo="roofing"
+        resumen={{
+          'Area del Techo': `${data.sqft.toLocaleString()} ft²`,
+          'Remocion': `${data.removalPercentage}%`,
+          'Pronto Pago': `$${data.downPayment.toLocaleString()}`,
+          'Descuentos': roofingResumen.descuentos,
+        }}
+        onGenerate={handleGenerateRoofingPDF}
+        planes={['Silver', 'Gold', 'Platinum']}
+        planesSeleccionados={planesParaPDF}
+        onPlanesChange={setPlanesParaPDF}
+      />
     </>
   );
 }
