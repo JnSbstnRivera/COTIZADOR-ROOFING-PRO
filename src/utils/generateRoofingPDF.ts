@@ -299,6 +299,20 @@ function drawCotizacionRoofing(
         text(page, `$${fmt(plan.mensual10)}`, 8, c3, tableY + 4, bold, DARK)
         tableY -= rH + 2
       })
+      // Valor con IVU y Valor antes de IVU por plan
+      tableY -= 4
+      const valX = M + 200
+      resumen.planes.forEach((plan, i) => {
+        const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
+        if (i % 2 === 0) rect(page, M, tableY - 3, dataW, rH, LIGHT)
+        rect(page, c0 - 2, tableY - 1, 52, 14, pc)
+        text(page, plan.nombre,                  7, c0 + 1,   tableY + 5, bold, WHITE)
+        text(page, 'Valor con IVU:',             7, M + 64,   tableY + 5, bold, BLUE)
+        text(page, `$${fmt(plan.valorConIvu)}`,  8, valX,     tableY + 5, bold, DARK)
+        text(page, 'Valor antes de IVU:',        7, valX + 90, tableY + 5, bold, BLUE)
+        text(page, `$${fmt(plan.valorAntesIvu)}`,8, valX + 200,tableY + 5, reg,  DARK)
+        tableY -= rH + 2
+      })
     }
 
     if (mod === 'home_depot') {
