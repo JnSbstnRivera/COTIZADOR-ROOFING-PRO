@@ -286,9 +286,9 @@ function drawCotizacionRoofing(
       const c0 = M + 4, c1 = M + 68, c2 = M + 160, c3 = M + 252, c4 = M + 352, c5 = M + 452
       rect(page, M, tableY - 3, dataW, rH, NAVY)
       text(page, 'Plan',             6, c0,  tableY + 5, bold, WHITE)
-      text(page, '60m (5.99%)',      6, c1,  tableY + 5, bold, WHITE)
-      text(page, '84m (7.99%)',      6, c2,  tableY + 5, bold, WHITE)
-      text(page, '120m (9.99%)',     6, c3,  tableY + 5, bold, WHITE)
+      text(page, '5 Años (5.99%)',   6, c1,  tableY + 5, bold, WHITE)
+      text(page, '7 Años (7.99%)',   6, c2,  tableY + 5, bold, WHITE)
+      text(page, '10 Años (9.99%)',  6, c3,  tableY + 5, bold, WHITE)
       text(page, 'Valor con IVU',    6, c4,  tableY + 5, bold, WHITE)
       text(page, 'Antes de IVU',     6, c5,  tableY + 5, bold, WHITE)
       tableY -= rH + 2
