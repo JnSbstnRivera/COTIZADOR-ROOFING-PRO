@@ -1,33 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Calculator, 
+import {
+  Calculator,
   Shield,
   Award,
   Crown,
-  ShieldCheck, 
-  Wrench, 
-  CreditCard, 
-  Map, 
-  Phone, 
-  Info, 
+  ShieldCheck,
+  Wrench,
+  CreditCard,
+  Map,
+  Info,
   CheckCircle2,
   Cloud,
   Sparkles,
-  ChevronRight,
   ChevronDown,
   Home,
-  Layers,
   Maximize2,
   FileSpreadsheet,
   Zap,
   RefreshCw,
-  AlertCircle,
   AlertTriangle,
-  ExternalLink,
   Globe,
   Ruler,
-  X
+  X,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { PLANS, CONSTANTS, QuoteData, Plan } from './types';
 import { PDFModal, type ClienteData, type ConsultorData } from './components/PDFModal';
@@ -295,14 +292,14 @@ const CashBox = ({ plan }: { plan: any }) => {
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   return (
-    <div className="mt-4 bg-emerald-50 rounded-xl border border-emerald-200 overflow-hidden transition-all duration-300 shadow-sm">
-      <button 
+    <div className="mt-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-200 dark:border-emerald-900/20 overflow-hidden transition-all duration-300 shadow-sm">
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-3 flex items-center hover:bg-emerald-100/50 transition-colors"
+        className="w-full p-3 flex items-center hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition-colors"
       >
-        <span className="text-emerald-700 font-black text-[10px] uppercase tracking-widest">Total con IVU (Cash)</span>
+        <span className="text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase tracking-widest">Total con IVU (Cash)</span>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-emerald-600 font-black text-sm md:text-base">{formatCurrency(plan.cashTotalConIvu)}</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm md:text-base">{formatCurrency(plan.cashTotalConIvu)}</span>
           <motion.div 
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -324,17 +321,17 @@ const CashBox = ({ plan }: { plan: any }) => {
               opacity: { duration: 0.3, ease: "easeOut" },
               y: { type: "spring", stiffness: 250, damping: 28 }
             }}
-            className="px-3 pb-3 space-y-2 border-t border-emerald-100 pt-2 overflow-hidden"
+            className="px-3 pb-3 space-y-2 border-t border-emerald-100 dark:border-emerald-900/20 pt-2 overflow-hidden"
           >
             <div className="flex justify-between text-sm">
-              <span className="text-emerald-700/70 font-black text-[10px] uppercase">Valor sin IVU</span>
-              <span className="text-emerald-600/80 font-black">
+              <span className="text-emerald-700/70 dark:text-emerald-400/70 font-black text-[10px] uppercase">Valor sin IVU</span>
+              <span className="text-emerald-600/80 dark:text-emerald-400/80 font-black">
                 {formatCurrency(plan.cashValorSinIvu)}
               </span>
             </div>
-            <div className="flex justify-between text-sm border-t border-emerald-100 pt-1">
-              <span className="text-emerald-700/70 font-black text-[10px] uppercase">IVU (11.5%)</span>
-              <span className="text-emerald-600/80 font-black">
+            <div className="flex justify-between text-sm border-t border-emerald-100 dark:border-emerald-900/20 pt-1">
+              <span className="text-emerald-700/70 dark:text-emerald-400/70 font-black text-[10px] uppercase">IVU (11.5%)</span>
+              <span className="text-emerald-600/80 dark:text-emerald-400/80 font-black">
                 {formatCurrency(plan.cashIvu)}
               </span>
             </div>
@@ -348,6 +345,21 @@ const CashBox = ({ plan }: { plan: any }) => {
 export default function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [showDiscounts, setShowDiscounts] = useState(false);
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try { return localStorage.getItem('wh-theme') === 'dark'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+      try { localStorage.setItem('wh-theme', 'dark'); } catch {}
+    } else {
+      root.classList.remove('dark');
+      try { localStorage.setItem('wh-theme', 'light'); } catch {}
+    }
+  }, [isDarkMode]);
   const [data, setData] = useState<QuoteData>({
     sqft: 0,
     removalPercentage: 0,
@@ -625,28 +637,37 @@ export default function App() {
           {/* Header */}
           <header className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-6">
-              <div className="bg-white p-3 rounded-xl shadow-xl transform hover:scale-105 transition-transform">
-                <img 
-                  src="https://i.postimg.cc/44pJ0vXw/logo.png" 
-                  className="h-16 w-auto" 
-                  alt="Windmar Home" 
-                  referrerPolicy="no-referrer"
-                />
-              </div>
+              <img
+                src="https://i.postimg.cc/44pJ0vXw/logo.png"
+                className="h-16 w-auto transform hover:scale-105 transition-transform"
+                alt="Windmar Home"
+                referrerPolicy="no-referrer"
+              />
               <div>
-                <h1 className="text-3xl font-black text-windmar-blue-dark tracking-tighter uppercase">Windmar Roofing PRO</h1>
-                <p className="text-windmar-blue text-base font-medium">Soluciones de techado de alta ingeniería</p>
+                <h1 className="text-3xl font-black text-windmar-blue-dark dark:text-[#e8eaed] tracking-tighter uppercase">Cotizador Roofing PRO</h1>
+                <p className="text-windmar-blue dark:text-[#a0a4ad] text-base font-medium">Soluciones de techado de alta ingeniería</p>
               </div>
             </div>
-            <div className="text-right hidden md:block">
-              <div className="flex items-center gap-2 text-windmar-gold font-bold text-lg justify-end">
-                <Phone size={20} />
-                <span>787-395-7766</span>
-              </div>
-              <p className="text-slate-600 text-sm font-black uppercase">Linea Windmar Home</p>
-              <div className="flex gap-4 justify-end mt-1">
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Telemercadeo - 811</p>
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Ventas - 839</p>
+
+            {/* Theme Toggle */}
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#1a1d25] p-1 pr-3 rounded-full border border-slate-200 dark:border-white/[0.08] shadow-sm">
+              <motion.button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                animate={{ rotate: isDarkMode ? 360 : 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className={`p-1.5 rounded-full transition-colors duration-500 ${
+                  isDarkMode
+                    ? 'bg-windmar-gold text-windmar-dark shadow-[0_0_10px_rgba(242,158,31,0.3)]'
+                    : 'bg-windmar-blue text-white shadow-[0_0_10px_rgba(29,66,155,0.2)]'
+                }`}
+              >
+                {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
+              </motion.button>
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-[8px] font-black text-slate-400 dark:text-[#6b7280] uppercase tracking-tighter">Tema</span>
+                <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-windmar-gold' : 'text-windmar-blue'}`}>
+                  {isDarkMode ? 'Oscuro' : 'Claro'}
+                </span>
               </div>
             </div>
           </header>
@@ -662,7 +683,7 @@ export default function App() {
                       <Calculator size={24} className="text-windmar-gold" />
                     </div>
                     <div>
-                      <h2 className="font-black text-slate-900 text-lg uppercase tracking-widest">COTIZADOR ROOFING PRO</h2>
+                      <h2 className="font-black text-slate-900 dark:text-[#e8eaed] text-lg uppercase tracking-widest">COTIZADOR ROOFING PRO</h2>
                     </div>
                   </div>
                   {data.sqft > 0 && (
@@ -799,26 +820,26 @@ export default function App() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                        className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden origin-top"
+                        className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#161b22] border border-slate-200 dark:border-white/[0.08] rounded-xl shadow-2xl z-[100] overflow-hidden origin-top"
                       >
                         <div className="p-2 flex flex-col gap-1">
-                          <button 
+                          <button
                             onClick={() => setData({...data, firmaYGana: !data.firmaYGana})}
-                            className={`flex items-center justify-between p-3 rounded-lg transition-all hover:bg-slate-50 ${data.firmaYGana ? 'bg-windmar-gold/10' : ''}`}
+                            className={`flex items-center justify-between p-3 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-white/[0.03] ${data.firmaYGana ? 'bg-windmar-gold/10' : ''}`}
                           >
                             <div className="flex flex-col items-start">
-                              <span className="text-xs font-black text-slate-900 uppercase tracking-wider">Firma y Gana</span>
+                              <span className="text-xs font-black text-slate-900 dark:text-[#e8eaed] uppercase tracking-wider">Firma y Gana</span>
                               <span className="text-[10px] font-bold text-windmar-gold">-$500 de descuento</span>
                             </div>
                             {data.firmaYGana && <CheckCircle2 size={16} className="text-windmar-gold" />}
                           </button>
                           
-                          <button 
+                          <button
                             onClick={() => setData({...data, clienteVip: !data.clienteVip})}
-                            className={`flex items-center justify-between p-3 rounded-lg transition-all hover:bg-slate-50 ${data.clienteVip ? 'bg-windmar-gold/10' : ''}`}
+                            className={`flex items-center justify-between p-3 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-white/[0.03] ${data.clienteVip ? 'bg-windmar-gold/10' : ''}`}
                           >
                             <div className="flex flex-col items-start">
-                              <span className="text-xs font-black text-slate-900 uppercase tracking-wider">Cliente VIP</span>
+                              <span className="text-xs font-black text-slate-900 dark:text-[#e8eaed] uppercase tracking-wider">Cliente VIP</span>
                               <span className="text-[10px] font-bold text-windmar-gold">-$1,000 de descuento</span>
                             </div>
                             {data.clienteVip && <CheckCircle2 size={16} className="text-windmar-gold" />}
@@ -915,38 +936,38 @@ export default function App() {
                       </div>
 
                         <div className="space-y-4 mb-8">
-                          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-white/[0.06]">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-slate-600 uppercase tracking-widest">5 Años</span>
+                              <span className="text-xs font-black text-slate-600 dark:text-[#a0a4ad] uppercase tracking-widest">5 Años</span>
                               <span className="text-[10px] font-black text-windmar-gold">(5.99 %)</span>
                             </div>
-                            <span className="text-xl font-black text-windmar-blue-dark">{formatCurrency(plan.monthly60)}</span>
+                            <span className="text-xl font-black text-windmar-blue-dark dark:text-[#e8eaed]">{formatCurrency(plan.monthly60)}</span>
                           </div>
-                          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-white/[0.06]">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-slate-600 uppercase tracking-widest">7 Años</span>
+                              <span className="text-xs font-black text-slate-600 dark:text-[#a0a4ad] uppercase tracking-widest">7 Años</span>
                               <span className="text-[10px] font-black text-windmar-gold">(7.99 %)</span>
                             </div>
-                            <span className="text-xl font-black text-windmar-blue-dark">{formatCurrency(plan.monthly84)}</span>
+                            <span className="text-xl font-black text-windmar-blue-dark dark:text-[#e8eaed]">{formatCurrency(plan.monthly84)}</span>
                           </div>
-                          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-white/[0.06]">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-slate-600 uppercase tracking-widest">10 Años</span>
+                              <span className="text-xs font-black text-slate-600 dark:text-[#a0a4ad] uppercase tracking-widest">10 Años</span>
                               <span className="text-[10px] font-black text-windmar-gold">(9.99 %)</span>
                             </div>
-                            <span className="text-2xl font-black text-windmar-blue-dark">{formatCurrency(plan.monthly120)}</span>
+                            <span className="text-2xl font-black text-windmar-blue-dark dark:text-[#e8eaed]">{formatCurrency(plan.monthly120)}</span>
                           </div>
                         </div>
                     </div>
 
                     <div className="space-y-3 pt-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600 font-black uppercase text-[10px]">valor con ivu</span>
-                        <span className="text-slate-900 font-black">{formatCurrency(plan.cashBalance)}</span>
+                        <span className="text-slate-600 dark:text-[#a0a4ad] font-black uppercase text-[10px]">valor con ivu</span>
+                        <span className="text-slate-900 dark:text-[#e8eaed] font-black">{formatCurrency(plan.cashBalance)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-600 font-black uppercase text-[10px]">valor antes de ivu</span>
-                        <span className="text-slate-900 font-black">{formatCurrency(plan.baseBalance)}</span>
+                        <span className="text-slate-600 dark:text-[#a0a4ad] font-black uppercase text-[10px]">valor antes de ivu</span>
+                        <span className="text-slate-900 dark:text-[#e8eaed] font-black">{formatCurrency(plan.baseBalance)}</span>
                       </div>
                       
                       <CashBox plan={plan} />
@@ -973,29 +994,29 @@ export default function App() {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
                     <Map size={24} className="text-windmar-gold" />
-                    <h3 className="font-black text-slate-900 uppercase tracking-widest text-lg">Mapa de Medición</h3>
+                    <h3 className="font-black text-slate-900 dark:text-[#e8eaed] uppercase tracking-widest text-lg">Mapa de Medición</h3>
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-slate-200">
+                  <div className="flex items-center gap-2 bg-white dark:bg-[#0f1215] p-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08]">
                     <div className="flex flex-col">
-                      <span className="text-[8px] text-slate-900 font-black uppercase tracking-tighter ml-1">Latitud</span>
-                      <input 
+                      <span className="text-[8px] text-slate-900 dark:text-[#a0a4ad] font-black uppercase tracking-tighter ml-1">Latitud</span>
+                      <input
                         type="text"
                         value={coords.lat}
                         onChange={(e) => setCoords(prev => ({ ...prev, lat: e.target.value }))}
                         placeholder="Latitud"
-                        className="w-24 bg-transparent px-1 py-0.5 text-slate-900 text-[10px] font-bold outline-none focus:text-windmar-gold"
+                        className="w-24 bg-transparent px-1 py-0.5 text-slate-900 dark:text-[#e8eaed] text-[10px] font-bold outline-none focus:text-windmar-gold"
                       />
                     </div>
-                    <div className="w-px h-5 bg-slate-200 self-end mb-1" />
+                    <div className="w-px h-5 bg-slate-200 dark:bg-white/10 self-end mb-1" />
                     <div className="flex flex-col">
-                      <span className="text-[8px] text-slate-900 font-black uppercase tracking-tighter ml-1">Longitud</span>
-                      <input 
+                      <span className="text-[8px] text-slate-900 dark:text-[#a0a4ad] font-black uppercase tracking-tighter ml-1">Longitud</span>
+                      <input
                         type="text"
                         value={coords.lng}
                         onChange={(e) => setCoords(prev => ({ ...prev, lng: e.target.value }))}
                         placeholder="Longitud"
-                        className="w-24 bg-transparent px-1 py-0.5 text-slate-900 text-[10px] font-bold outline-none focus:text-windmar-gold"
+                        className="w-24 bg-transparent px-1 py-0.5 text-slate-900 dark:text-[#e8eaed] text-[10px] font-bold outline-none focus:text-windmar-gold"
                       />
                     </div>
                     <button 
@@ -1148,54 +1169,54 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
                 className="glass-card flex flex-col h-full overflow-hidden shadow-xl"
               >
-                <div className="p-6 border-b border-slate-200 flex items-center gap-3 bg-slate-50">
+                <div className="p-6 border-b border-slate-200 dark:border-white/[0.08] flex items-center gap-3 bg-slate-50 dark:bg-[#0f1215]">
                   <ShieldCheck size={24} className="text-windmar-gold" />
-                  <h3 className="font-black text-slate-900 uppercase tracking-widest text-lg">COMPARATIVO DE PLANES DE SELLADO</h3>
+                  <h3 className="font-black text-slate-900 dark:text-[#e8eaed] uppercase tracking-widest text-lg">COMPARATIVO DE PLANES DE SELLADO</h3>
                 </div>
                 <div className="flex-1 overflow-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-700 uppercase text-[10px] font-black tracking-[0.2em]">
+                      <tr className="bg-slate-100 dark:bg-[#0f1215] text-slate-700 dark:text-[#a0a4ad] uppercase text-[10px] font-black tracking-[0.2em]">
                         <th className="px-5 py-4 font-black">Beneficio</th>
                         <th className="px-5 py-4 font-black">Silver</th>
                         <th className="px-5 py-4 font-black">Gold</th>
                         <th className="px-5 py-4 font-black">Platinum</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      <tr className="hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-4 font-bold text-slate-700">Garantía Inst.</td>
-                        <td className="px-5 py-4 text-slate-600">1 Año</td>
+                    <tbody className="divide-y divide-slate-200 dark:divide-white/[0.06]">
+                      <tr className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                        <td className="px-5 py-4 font-bold text-slate-700 dark:text-[#a0a4ad]">Garantía Inst.</td>
+                        <td className="px-5 py-4 text-slate-600 dark:text-[#6b7280]">1 Año</td>
                         <td className="px-5 py-4 text-windmar-gold font-black">10 Años</td>
                         <td className="px-5 py-4 text-windmar-gold font-black">10 Años</td>
                       </tr>
-                      <tr className="hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-4 font-bold text-slate-700">Garantía Fab.</td>
-                        <td className="px-5 py-4 text-slate-600" colSpan={3}>Limitada de por Vida</td>
+                      <tr className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                        <td className="px-5 py-4 font-bold text-slate-700 dark:text-[#a0a4ad]">Garantía Fab.</td>
+                        <td className="px-5 py-4 text-slate-600 dark:text-[#6b7280]" colSpan={3}>Limitada de por Vida</td>
                       </tr>
-                      <tr className="hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-4 font-bold text-slate-700">Mantenimiento</td>
-                        <td className="px-5 py-4 text-slate-500">No incl.</td>
-                        <td className="px-5 py-4 text-slate-500">No incl.</td>
-                        <td className="px-5 py-4 text-windmar-blue font-black">
+                      <tr className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                        <td className="px-5 py-4 font-bold text-slate-700 dark:text-[#a0a4ad]">Mantenimiento</td>
+                        <td className="px-5 py-4 text-slate-500 dark:text-[#6b7280]">No incl.</td>
+                        <td className="px-5 py-4 text-slate-500 dark:text-[#6b7280]">No incl.</td>
+                        <td className="px-5 py-4 text-windmar-blue dark:text-blue-400 font-black">
                           Incluido 10 años
-                          <div className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-widest">(1 cada 2 años)</div>
+                          <div className="text-[9px] text-slate-500 dark:text-[#6b7280] font-bold mt-0.5 uppercase tracking-widest">(1 cada 2 años)</div>
                         </td>
                       </tr>
-                      <tr className="hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-4 font-bold text-slate-700">Soporte 24/7</td>
-                        <td className="px-5 py-4 text-slate-600">Sí</td>
-                        <td className="px-5 py-4 text-slate-600">Sí</td>
-                        <td className="px-5 py-4 text-slate-600">Sí</td>
+                      <tr className="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                        <td className="px-5 py-4 font-bold text-slate-700 dark:text-[#a0a4ad]">Soporte 24/7</td>
+                        <td className="px-5 py-4 text-slate-600 dark:text-[#6b7280]">Sí</td>
+                        <td className="px-5 py-4 text-slate-600 dark:text-[#6b7280]">Sí</td>
+                        <td className="px-5 py-4 text-slate-600 dark:text-[#6b7280]">Sí</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
                 
-                <div className="p-5 bg-slate-50 border-t border-slate-200 space-y-4">
+                <div className="p-5 bg-slate-50 dark:bg-[#0f1215] border-t border-slate-200 dark:border-white/[0.08] space-y-4">
                   <div>
                     <h4 className="text-[10px] font-black text-windmar-gold uppercase mb-2 tracking-widest">Detalles del Servicio</h4>
-                    <ul className="space-y-1.5 text-[11px] text-slate-700 font-medium">
+                    <ul className="space-y-1.5 text-[11px] text-slate-700 dark:text-[#a0a4ad] font-medium">
                       <li className="flex gap-2">
                         <span className="text-windmar-gold">•</span>
                         <span>Incluye Rectificaciones (aires, calentadores, etc.)</span>
@@ -1204,12 +1225,12 @@ export default function App() {
                         <span className="text-windmar-gold">•</span>
                         <span>Al vencerse la garantía de mano de obra: Mínimo $300 por visita</span>
                       </li>
-                      <li className="text-[10px] text-slate-500 italic ml-4 leading-relaxed">
+                      <li className="text-[10px] text-slate-500 dark:text-[#6b7280] italic ml-4 leading-relaxed">
                         *Si se resuelve en &lt; 2 horas, no hay costo adicional a los $300. Trabajos adicionales se cotizan aparte.
                       </li>
                     </ul>
                   </div>
-                  <p className="text-[10px] text-slate-500 italic text-center font-medium border-t border-slate-100 pt-3">
+                  <p className="text-[10px] text-slate-500 dark:text-[#6b7280] italic text-center font-medium border-t border-slate-100 dark:border-white/[0.06] pt-3">
                     *Precios sujetos a inspección técnica final en sitio.
                   </p>
                 </div>
@@ -1217,42 +1238,22 @@ export default function App() {
             </div>
           </main>
 
-          {/* Footer Info */}
-          <footer className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t border-slate-200">
-            <div className="flex gap-4">
-              <div className="bg-windmar-gold/10 p-3 rounded-xl h-fit">
-                <ShieldCheck className="text-windmar-gold" size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">Certificación PRO</h4>
-                <p className="text-slate-600 text-xs leading-relaxed">Instaladores certificados por los principales fabricantes de selladores en EE.UU. y PR.</p>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="bg-windmar-blue/10 p-3 rounded-xl h-fit">
-                <CreditCard className="text-windmar-blue" size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">Financiamiento Flexible</h4>
-                <p className="text-slate-600 text-xs leading-relaxed">Opciones de 5, 7 y 10 años con tasas competitivas desde 5.99% APR.</p>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="bg-windmar-blue/10 p-3 rounded-xl h-fit">
-                <Wrench className="text-windmar-blue" size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">Soporte Local</h4>
-                <p className="text-slate-600 text-xs leading-relaxed">Equipo de servicio al cliente basado en Puerto Rico disponible 24/7 para emergencias.</p>
+          {/* Footer */}
+          <footer className="pt-8 border-t border-slate-200 dark:border-white/[0.08]">
+            <div className="bg-white dark:bg-[#161b22] rounded-[32px] p-10 border border-slate-200 dark:border-white/[0.08] text-center relative overflow-hidden">
+              <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-windmar-blue via-windmar-gold to-windmar-blue-dark"></div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-14 h-14 bg-slate-50 dark:bg-[#0f1215] rounded-full flex items-center justify-center shadow-sm">
+                  <ShieldCheck className="w-7 h-7 text-windmar-blue" />
+                </div>
+                <h2 className="text-lg font-black text-windmar-blue-dark dark:text-[#e8eaed]">Grupo de Análisis y Desarrollo</h2>
+                <p className="text-slate-500 dark:text-[#a0a4ad] font-medium">Call Center · Windmar Home</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-[#a0a4ad] mt-4 italic">
+                  "¡Hagamos que tu techo pague tu factura!" 🏠🔋
+                </p>
               </div>
             </div>
           </footer>
-
-          <div className="text-center pt-8 pb-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-              © 2026 Windmar Home • Todos los derechos reservados
-            </p>
-          </div>
         </div>
       </div>
 
