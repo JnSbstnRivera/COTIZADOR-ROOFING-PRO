@@ -1238,22 +1238,42 @@ export default function App() {
             </div>
           </main>
 
-          {/* Footer */}
-          <footer className="pt-8 border-t border-slate-200 dark:border-white/[0.08]">
-            <div className="bg-white dark:bg-[#161b22] rounded-[32px] p-10 border border-slate-200 dark:border-white/[0.08] text-center relative overflow-hidden">
-              <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-windmar-blue via-windmar-gold to-windmar-blue-dark"></div>
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-14 h-14 bg-slate-50 dark:bg-[#0f1215] rounded-full flex items-center justify-center shadow-sm">
-                  <ShieldCheck className="w-7 h-7 text-windmar-blue" />
-                </div>
-                <h2 className="text-lg font-black text-windmar-blue-dark dark:text-[#e8eaed]">Grupo de Análisis y Desarrollo</h2>
-                <p className="text-slate-500 dark:text-[#a0a4ad] font-medium">Call Center · Windmar Home</p>
-                <p className="text-sm font-medium text-slate-500 dark:text-[#a0a4ad] mt-4 italic">
-                  "¡Hagamos que tu techo pague tu factura!" 🏠🔋
-                </p>
+          {/* Footer Info */}
+          <footer className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t border-slate-200 dark:border-white/[0.08]">
+            <div className="flex gap-4">
+              <div className="bg-windmar-gold/10 p-3 rounded-xl h-fit">
+                <ShieldCheck className="text-windmar-gold" size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-[#e8eaed] text-sm mb-1">Certificación PRO</h4>
+                <p className="text-slate-600 dark:text-[#a0a4ad] text-xs leading-relaxed">Instaladores certificados por los principales fabricantes de selladores en EE.UU. y PR.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="bg-windmar-blue/10 p-3 rounded-xl h-fit">
+                <CreditCard className="text-windmar-blue" size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-[#e8eaed] text-sm mb-1">Financiamiento Flexible</h4>
+                <p className="text-slate-600 dark:text-[#a0a4ad] text-xs leading-relaxed">Opciones de 5, 7 y 10 años con tasas competitivas desde 5.99% APR.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="bg-windmar-blue/10 p-3 rounded-xl h-fit">
+                <Wrench className="text-windmar-blue" size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-[#e8eaed] text-sm mb-1">Soporte Local</h4>
+                <p className="text-slate-600 dark:text-[#a0a4ad] text-xs leading-relaxed">Equipo de servicio al cliente basado en Puerto Rico disponible 24/7 para emergencias.</p>
               </div>
             </div>
           </footer>
+
+          <div className="text-center pt-8 pb-4">
+            <p className="text-[10px] font-black text-slate-400 dark:text-[#6b7280] uppercase tracking-[0.3em]">
+              © 2026 Windmar Home • Todos los derechos reservados
+            </p>
+          </div>
         </div>
       </div>
 
