@@ -282,35 +282,26 @@ function drawCotizacionRoofing(
     if (mod === 'wh_financial') {
       text(page, 'Modalidad WH Financial', 9, M, tableY, bold, BLUE)
       tableY -= 22
-      const c0 = M + 6, c1 = M + 108, c2 = M + 238, c3 = M + 368
+      // 6 columnas: Plan | 60m | 84m | 120m | Val. con IVU | Val. antes IVU
+      const c0 = M + 4, c1 = M + 68, c2 = M + 160, c3 = M + 252, c4 = M + 352, c5 = M + 452
       rect(page, M, tableY - 3, dataW, rH, NAVY)
-      text(page, 'Plan',                  7, c0, tableY + 5, bold, WHITE)
-      text(page, '60 meses (5.99%)',      7, c1, tableY + 5, bold, WHITE)
-      text(page, '84 meses (7.99%)',      7, c2, tableY + 5, bold, WHITE)
-      text(page, '120 meses (9.99%)',     7, c3, tableY + 5, bold, WHITE)
+      text(page, 'Plan',             6, c0,  tableY + 5, bold, WHITE)
+      text(page, '60m (5.99%)',      6, c1,  tableY + 5, bold, WHITE)
+      text(page, '84m (7.99%)',      6, c2,  tableY + 5, bold, WHITE)
+      text(page, '120m (9.99%)',     6, c3,  tableY + 5, bold, WHITE)
+      text(page, 'Valor con IVU',    6, c4,  tableY + 5, bold, WHITE)
+      text(page, 'Antes de IVU',     6, c5,  tableY + 5, bold, WHITE)
       tableY -= rH + 2
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         if (i % 2 === 0) rect(page, M, tableY - 3, dataW, rH, LIGHT)
         rect(page, c0 - 2, tableY - 1, 52, 14, pc)
-        text(page, plan.nombre,             7, c0 + 1, tableY + 5, bold, WHITE)
-        text(page, `$${fmt(plan.mensual5)}`,  8, c1, tableY + 4, reg,  DARK)
-        text(page, `$${fmt(plan.mensual7)}`,  8, c2, tableY + 4, reg,  DARK)
-        text(page, `$${fmt(plan.mensual10)}`, 8, c3, tableY + 4, bold, DARK)
-        tableY -= rH + 2
-      })
-      // Valor con IVU y Valor antes de IVU por plan
-      tableY -= 4
-      const valX = M + 200
-      resumen.planes.forEach((plan, i) => {
-        const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
-        if (i % 2 === 0) rect(page, M, tableY - 3, dataW, rH, LIGHT)
-        rect(page, c0 - 2, tableY - 1, 52, 14, pc)
-        text(page, plan.nombre,                  7, c0 + 1,   tableY + 5, bold, WHITE)
-        text(page, 'Valor con IVU:',             7, M + 64,   tableY + 5, bold, BLUE)
-        text(page, `$${fmt(plan.valorConIvu)}`,  8, valX,     tableY + 5, bold, DARK)
-        text(page, 'Valor antes de IVU:',        7, valX + 90, tableY + 5, bold, BLUE)
-        text(page, `$${fmt(plan.valorAntesIvu)}`,8, valX + 200,tableY + 5, reg,  DARK)
+        text(page, plan.nombre,                  7, c0 + 1, tableY + 5, bold, WHITE)
+        text(page, `$${fmt(plan.mensual5)}`,     7, c1,     tableY + 4, reg,  DARK)
+        text(page, `$${fmt(plan.mensual7)}`,     7, c2,     tableY + 4, reg,  DARK)
+        text(page, `$${fmt(plan.mensual10)}`,    7, c3,     tableY + 4, bold, DARK)
+        text(page, `$${fmt(plan.valorConIvu)}`,  7, c4,     tableY + 4, bold, DARK)
+        text(page, `$${fmt(plan.valorAntesIvu)}`,7, c5,     tableY + 4, reg,  DARK)
         tableY -= rH + 2
       })
     }
