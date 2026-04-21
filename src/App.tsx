@@ -252,7 +252,7 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
             transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.5 }}
             className="space-y-2"
           >
-            <h2 className="text-windmar-blue-dark font-black text-4xl uppercase tracking-tighter italic drop-shadow-md">
+            <h2 className="text-windmar-blue-dark font-black text-2xl sm:text-4xl uppercase tracking-tighter italic drop-shadow-md">
               SISTEMA <span className="text-windmar-gold">ROOFING PRO</span>
             </h2>
           </motion.div>
@@ -632,7 +632,7 @@ export default function App() {
         {showIntro && <SplashScreen onComplete={() => setShowIntro(false)} />}
       </AnimatePresence>
 
-      <div className="min-h-screen p-4 md:p-8">
+      <div className="min-h-screen p-3 sm:p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <header className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -644,8 +644,8 @@ export default function App() {
                 referrerPolicy="no-referrer"
               />
               <div>
-                <h1 className="text-3xl font-black text-windmar-blue-dark dark:text-[#e8eaed] tracking-tighter uppercase">Cotizador Roofing PRO</h1>
-                <p className="text-windmar-blue dark:text-[#a0a4ad] text-base font-medium">Soluciones de techado de alta ingeniería</p>
+                <h1 className="text-xl sm:text-3xl font-black text-windmar-blue-dark dark:text-[#e8eaed] tracking-tighter uppercase">Cotizador Roofing PRO</h1>
+                <p className="text-windmar-blue dark:text-[#a0a4ad] text-sm sm:text-base font-medium">Soluciones de techado de alta ingeniería</p>
               </div>
             </div>
 
@@ -889,7 +889,7 @@ export default function App() {
                       scale: { type: "spring", stiffness: 400, damping: 25 },
                       y: { type: "spring", stiffness: 400, damping: 25 }
                     }}
-                    className={`glass-card p-6 flex flex-col justify-between relative overflow-hidden border-t-4 shadow-xl cursor-pointer transition-shadow hover:shadow-2xl ${
+                    className={`glass-card p-4 sm:p-6 flex flex-col justify-between relative overflow-hidden border-t-4 shadow-xl cursor-pointer transition-shadow hover:shadow-2xl ${
                       plan.id === 'silver' ? 'border-slate-400' : plan.id === 'gold' ? 'border-windmar-gold' : 'border-slate-300'
                     }`}
                   >
@@ -989,7 +989,7 @@ export default function App() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                className="glass-card p-6 flex flex-col h-full shadow-xl"
+                className="glass-card p-4 sm:p-6 flex flex-col h-full shadow-xl"
               >
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
@@ -1174,7 +1174,7 @@ export default function App() {
                   <h3 className="font-black text-slate-900 dark:text-[#e8eaed] uppercase tracking-widest text-lg">COMPARATIVO DE PLANES DE SELLADO</h3>
                 </div>
                 <div className="flex-1 overflow-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-left text-xs sm:text-sm">
                     <thead>
                       <tr className="bg-slate-100 dark:bg-[#0f1215] text-slate-700 dark:text-[#a0a4ad] uppercase text-[10px] font-black tracking-[0.2em]">
                         <th className="px-5 py-4 font-black">Beneficio</th>
