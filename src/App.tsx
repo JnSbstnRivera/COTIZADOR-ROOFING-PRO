@@ -450,57 +450,65 @@ export default function App() {
   };
 
   const fetchFreeRoofArea = async () => {
+    const lat = parseFloat(coords.lat);
+    const lng = parseFloat(coords.lng);
+    const isDefault = lat === 18.2208 && lng === -66.5901;
+
+    if (isDefault) {
+      setAreaError('Ingresa las coordenadas del techo antes de usar Auto-Medir.');
+      return;
+    }
+
     setIsFetchingArea(true);
     setAreaError(null);
 
     try {
-      // Overpass API query for buildings near the point
-      const query = `[out:json];way(around:50, ${coords.lat}, ${coords.lng})["building"];out geom;`;
+      const query = `[out:json];way(around:100,${lat},${lng})["building"];out geom;`;
       const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
 
-      if (!response.ok) throw new Error('Error al conectar con el servidor de mapas gratuito');
+      if (!response.ok) throw new Error('Error al conectar con OpenStreetMap. Intenta de nuevo.');
 
       const dataJson = await response.json();
       const buildings = dataJson.elements;
 
       if (!buildings || buildings.length === 0) {
-        throw new Error('No se encontró ninguna edificación registrada en OpenStreetMap para estas coordenadas');
+        throw new Error('No se encontró ningún edificio en OpenStreetMap para estas coordenadas. Usa el modo Manual.');
       }
 
-      // Pick the closest building
       const building = buildings[0];
       const nodes = building.geometry;
 
       if (nodes && nodes.length > 2) {
-        // Calculate area using Shoelace formula on projected coordinates
-        let area = 0;
-        const R = 6378137; // Earth radius in meters
-        const latRad = parseFloat(coords.lat) * Math.PI / 180;
-        
+        // Coordenadas relativas al primer nodo para evitar pérdida de precisión numérica
+        const refLat = nodes[0].lat;
+        const refLon = nodes[0].lon;
+        const cosLat = Math.cos(refLat * Math.PI / 180);
+        const R = 6378137;
+
         const points = nodes.map((n: any) => ({
-          x: R * n.lon * Math.PI / 180 * Math.cos(latRad),
-          y: R * n.lat * Math.PI / 180
+          x: (n.lon - refLon) * (Math.PI / 180) * R * cosLat,
+          y: (n.lat - refLat) * (Math.PI / 180) * R,
         }));
 
+        let area = 0;
         for (let i = 0; i < points.length; i++) {
           const j = (i + 1) % points.length;
           area += points[i].x * points[j].y;
           area -= points[j].x * points[i].y;
         }
-        area = Math.abs(area) / 2;
+        const areaM2  = Math.abs(area) / 2;
+        const areaSqFt = Math.round(areaM2 * 10.7639);
 
-        const areaSqFt = Math.round(area * 10.7639);
-        
         if (areaSqFt < 100) {
-          throw new Error('El área detectada es demasiado pequeña para ser un techo válido');
+          throw new Error(`Área detectada (${areaSqFt} ft²) demasiado pequeña. Verifica las coordenadas o usa el modo Manual.`);
         }
 
         setData(prev => ({ ...prev, sqft: areaSqFt }));
       } else {
-        throw new Error('No se pudo determinar la geometría del edificio');
+        throw new Error('No se pudo obtener la geometría del edificio. Usa el modo Manual.');
       }
     } catch (error: any) {
-      setAreaError(error.message || 'Error al obtener datos gratuitos');
+      setAreaError(error.message || 'Error al obtener datos. Intenta de nuevo o usa el modo Manual.');
     } finally {
       setIsFetchingArea(false);
     }
@@ -815,7 +823,13 @@ export default function App() {
                   
                   <AnimatePresence>
                     {showDiscounts && (
-                      <motion.div 
+                      <>
+                      {/* Overlay invisible para cerrar al hacer clic afuera */}
+                      <div
+                        className="fixed inset-0 z-[99]"
+                        onClick={() => setShowDiscounts(false)}
+                      />
+                      <motion.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -852,6 +866,7 @@ export default function App() {
                           Cerrar Descuentos
                         </button>
                       </motion.div>
+                      </>
                     )}
                   </AnimatePresence>
                 </motion.div>
@@ -1049,6 +1064,14 @@ export default function App() {
                     {isManualMode ? 'Terminar' : 'Manual'}
                   </motion.button>
                 </div>
+
+                {/* Error Auto-Medir */}
+                {areaError && (
+                  <div className="flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl px-3 py-2 mb-3">
+                    <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-[11px] font-bold text-red-600 dark:text-red-400 leading-relaxed">{areaError}</p>
+                  </div>
+                )}
 
                 <div className="relative flex-1 min-h-[350px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-inner" id="map-capture-area">
                   {/* Map Controls Overlay */}
