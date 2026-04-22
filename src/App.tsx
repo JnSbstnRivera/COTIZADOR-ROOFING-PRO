@@ -955,7 +955,7 @@ export default function App() {
                               <span className="text-xs font-black text-slate-600 dark:text-[#a0a4ad] uppercase tracking-widest">10 Años</span>
                               <span className="text-[10px] font-black text-windmar-gold">(9.99 %)</span>
                             </div>
-                            <span className="text-2xl font-black text-windmar-blue-dark dark:text-[#e8eaed]">{formatCurrency(plan.monthly120)}</span>
+                            <span className="text-xl font-black text-windmar-blue-dark dark:text-[#e8eaed]">{formatCurrency(plan.monthly120)}</span>
                           </div>
                         </div>
                     </div>
