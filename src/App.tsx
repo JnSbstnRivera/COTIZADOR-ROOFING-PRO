@@ -1082,9 +1082,25 @@ export default function App() {
 
                 {/* Error Auto-Medir */}
                 {areaError && (
-                  <div className="flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl px-3 py-2 mb-3">
-                    <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
-                    <p className="text-[11px] font-bold text-red-600 dark:text-red-400 leading-relaxed">{areaError}</p>
+                  <div className="flex flex-col gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl px-3 py-2.5 mb-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle size={15} className="text-red-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[11px] font-black text-red-600 dark:text-red-400 leading-relaxed">
+                          😢 Lo sentimos mucho — {areaError}
+                        </p>
+                        <p className="text-[10px] text-red-500/80 dark:text-red-400/70 mt-0.5 font-semibold">
+                          Puedes trazar el contorno manualmente con el botón <span className="font-black">Manual</span>.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setAreaError(null); setIsManualMode(true); }}
+                      className="w-full py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Ruler size={12} />
+                      Activar Modo Manual
+                    </button>
                   </div>
                 )}
 
