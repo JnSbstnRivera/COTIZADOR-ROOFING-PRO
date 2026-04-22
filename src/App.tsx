@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Calculator,
@@ -382,6 +382,22 @@ export default function App() {
   const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
   const [modalidadesParaPDF, setModalidadesParaPDF] = useState<string[]>(['cash']);
 
+  // Safe lat/lng: fallback to PR center when field is empty or invalid (avoids Leaflet NaN crash)
+  const mapLat = isNaN(parseFloat(coords.lat)) ? 18.2208 : parseFloat(coords.lat);
+  const mapLng = isNaN(parseFloat(coords.lng)) ? -66.5901 : parseFloat(coords.lng);
+
+  // Ref for dropdown outside-click detection
+  const discountRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (discountRef.current && !discountRef.current.contains(e.target as Node)) {
+        setShowDiscounts(false);
+      }
+    };
+    if (showDiscounts) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showDiscounts]);
+
   const calculatePolygonArea = (points: L.LatLng[]) => {
     if (points.length < 3) return 0;
     
@@ -453,6 +469,11 @@ export default function App() {
     const lat = parseFloat(coords.lat);
     const lng = parseFloat(coords.lng);
     const isDefault = lat === 18.2208 && lng === -66.5901;
+
+    if (isNaN(lat) || isNaN(lng)) {
+      setAreaError('Ingresa coordenadas válidas antes de usar Auto-Medir.');
+      return;
+    }
 
     if (isDefault) {
       setAreaError('Ingresa las coordenadas del techo antes de usar Auto-Medir.');
@@ -771,7 +792,8 @@ export default function App() {
                 </div>
 
                 {/* Compact Discounts Dropdown */}
-                <motion.div 
+                <motion.div
+                  ref={discountRef}
                   whileHover={{ scale: 1.01 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   className="relative pt-2"
@@ -823,12 +845,6 @@ export default function App() {
                   
                   <AnimatePresence>
                     {showDiscounts && (
-                      <>
-                      {/* Overlay invisible para cerrar al hacer clic afuera */}
-                      <div
-                        className="fixed inset-0 z-[99]"
-                        onClick={() => setShowDiscounts(false)}
-                      />
                       <motion.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -866,7 +882,6 @@ export default function App() {
                           Cerrar Descuentos
                         </button>
                       </motion.div>
-                      </>
                     )}
                   </AnimatePresence>
                 </motion.div>
@@ -1101,16 +1116,16 @@ export default function App() {
                     </a>
                   </div>
 
-                  <MapContainer 
-                    center={[parseFloat(coords.lat), parseFloat(coords.lng)]} 
-                    zoom={8.0} 
+                  <MapContainer
+                    center={[mapLat, mapLng]}
+                    zoom={8.0}
                     maxZoom={23}
                     style={{ height: '100%', width: '100%' }}
                     zoomControl={false}
                   >
                     <TileLayer
                       attribution={mapLayer === 'satellite' ? '&copy; Esri' : '&copy; OpenStreetMap'}
-                      url={mapLayer === 'satellite' 
+                      url={mapLayer === 'satellite'
                         ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                         : "https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png"
                       }
@@ -1118,19 +1133,19 @@ export default function App() {
                       maxNativeZoom={19}
                     />
                     <MapEventsHandler onMapClick={handleMapClick} isManualMode={isManualMode} />
-                    {!isManualMode && (parseFloat(coords.lat) !== 18.2208 || parseFloat(coords.lng) !== -66.5901) && (
-                      <Marker position={[parseFloat(coords.lat), parseFloat(coords.lng)]} />
+                    {!isManualMode && (mapLat !== 18.2208 || mapLng !== -66.5901) && (
+                      <Marker position={[mapLat, mapLng]} />
                     )}
                     {manualPoints.length > 0 && (
                       <>
                         {manualPoints.map((p, i) => (
-                          <Marker 
-                            key={i} 
-                            position={p} 
+                          <Marker
+                            key={i}
+                            position={p}
                             icon={L.divIcon({
                               className: 'bg-windmar-gold w-3 h-3 rounded-full border border-white shadow-lg',
                               iconSize: [12, 12]
-                            })} 
+                            })}
                           />
                         ))}
                         {manualPoints.length >= 3 ? (
@@ -1140,7 +1155,7 @@ export default function App() {
                         )}
                       </>
                     )}
-                    <MapUpdater center={[parseFloat(coords.lat), parseFloat(coords.lng)]} />
+                    <MapUpdater center={[mapLat, mapLng]} />
                   </MapContainer>
 
                   <AnimatePresence>
