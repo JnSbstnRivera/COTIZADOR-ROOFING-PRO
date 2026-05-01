@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { PLANS, CONSTANTS, QuoteData, Plan } from './types';
 import { PDFModal, type ClienteData, type ConsultorData } from './components/PDFModal';
-import { generateRoofingPDF } from './utils/generateRoofingPDF';
+import { generateRoofingPDF, previewRoofingTemplate } from './utils/generateRoofingPDF';
 
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents, Polygon, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -715,15 +715,25 @@ export default function App() {
                       <h2 className="font-black text-slate-900 dark:text-[#e8eaed] text-lg uppercase tracking-widest">COTIZADOR ROOFING PRO</h2>
                     </div>
                   </div>
-                  {data.sqft > 0 && (
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setPdfModalAbierto(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0d2050] text-white text-xs font-black hover:bg-[#1a56c4] transition-colors shadow-md"
+                      onClick={() => previewRoofingTemplate()}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F89B24] text-white text-xs font-black hover:bg-[#e08810] transition-colors shadow-md"
+                      title="Ver preview de las páginas recreadas en código"
                     >
                       <FileSpreadsheet size={15} />
-                      Descargar PDF
+                      Vista Previa Template
                     </button>
-                  )}
+                    {data.sqft > 0 && (
+                      <button
+                        onClick={() => setPdfModalAbierto(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0d2050] text-white text-xs font-black hover:bg-[#1a56c4] transition-colors shadow-md"
+                      >
+                        <FileSpreadsheet size={15} />
+                        Descargar PDF
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">

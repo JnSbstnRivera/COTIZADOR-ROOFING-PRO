@@ -827,6 +827,46 @@ function drawFooter(page: any, W: number, logoImage: any, bold: any, reg: any, l
   text(page, 'ventas@windmarhome.com', 7, 468, 10, reg, rgb(0.85, 0.85, 0.95))
 }
 
+// ══════════════════════════════════════════════════════════════
+// PREVIEW: genera PDF solo con páginas recreadas en código
+// ══════════════════════════════════════════════════════════════
+export async function previewRoofingTemplate() {
+  const doc  = await PDFDocument.create()
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
+  const reg  = await doc.embedFont(StandardFonts.Helvetica)
+
+  let logoImage: any = null
+  try {
+    const r = await fetch('https://i.postimg.cc/6T5J2v2G/logo.png')
+    if (r.ok) logoImage = await doc.embedPng(await r.arrayBuffer())
+  } catch { }
+
+  let workerImage: any = null
+  try {
+    const r = await fetch('/assets/page-img-15.jpg')
+    if (r.ok) workerImage = await doc.embedJpg(await r.arrayBuffer())
+  } catch { }
+
+  // Página 1 — Planes de Sellado (ES)
+  const p1 = doc.addPage([612, 792])
+  drawPlanesSellado(p1, bold, reg, logoImage, 'es')
+
+  // Página 2 — Planes de Sellado (EN)
+  const p2 = doc.addPage([612, 792])
+  drawPlanesSellado(p2, bold, reg, logoImage, 'en')
+
+  // Página 3 — ¿Por qué Windmar? (ES)
+  const p3 = doc.addPage([612, 792])
+  drawPorQueWindmar(p3, bold, reg, logoImage, workerImage, 'es')
+
+  // Página 4 — Why Windmar? (EN)
+  const p4 = doc.addPage([612, 792])
+  drawPorQueWindmar(p4, bold, reg, logoImage, workerImage, 'en')
+
+  const bytes = await doc.save()
+  downloadPDF(bytes, 'roofing-template-preview.pdf')
+}
+
 // ── helpers ───────────────────────────────────────────────────
 function rect(page: any, x: number, y: number, w: number, h: number, color: any) {
   page.drawRectangle({ x, y, width: w, height: h, color })
