@@ -36,6 +36,9 @@ interface PDFModalProps {
   modalidades?: string[]
   modalidadesSeleccionadas?: string[]
   onModalidadesChange?: (m: string[]) => void
+  // Idioma del PDF
+  idioma?: 'es' | 'en'
+  onIdiomaChange?: (i: 'es' | 'en') => void
 }
 
 const TITULOS = {
@@ -86,6 +89,7 @@ export function PDFModal({
   plazos, plazoSeleccionado, onPlazoChange,
   planes, planesSeleccionados, onPlanesChange,
   modalidades, modalidadesSeleccionadas, onModalidadesChange,
+  idioma = 'es', onIdiomaChange,
 }: PDFModalProps) {
 
   const [cliente, setCliente] = useState<ClienteData>({
@@ -139,9 +143,26 @@ export function PDFModal({
               {TITULOS[tipo]}
             </span>
           </div>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
-            <X size={22} color="#888" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {onIdiomaChange && (
+              <div style={{ display: 'flex', borderRadius: 20, overflow: 'hidden', border: '1.5px solid #1a56c4' }}>
+                {(['es', 'en'] as const).map(lang => (
+                  <button key={lang} onClick={() => onIdiomaChange(lang)} style={{
+                    padding: '4px 12px', fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', border: 'none',
+                    background: idioma === lang ? '#1a56c4' : 'white',
+                    color:      idioma === lang ? 'white'   : '#1a56c4',
+                    transition: 'all 0.15s',
+                  }}>
+                    {lang.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
+              <X size={22} color="#888" />
+            </button>
+          </div>
         </div>
 
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>

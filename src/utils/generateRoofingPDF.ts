@@ -194,9 +194,11 @@ export async function generateRoofingPDF(
 ) {
   const lang = resumen.idioma ?? 'es'
 
-  const res = await fetch('/roofing-modelo.pdf')
-  if (!res.ok) throw new Error('No se pudo cargar el PDF modelo')
-  const originalBytes = await res.arrayBuffer()
+  const modeloUrl = lang === 'en' ? '/roofing-modelo-en.pdf' : '/roofing-modelo.pdf'
+  const res = await fetch(modeloUrl)
+  const finalRes = res.ok ? res : await fetch('/roofing-modelo.pdf')
+  if (!finalRes.ok) throw new Error('No se pudo cargar el PDF modelo')
+  const originalBytes = await finalRes.arrayBuffer()
   const originalDoc   = await PDFDocument.load(originalBytes)
 
   const outputDoc = await PDFDocument.create()

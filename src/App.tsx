@@ -381,6 +381,7 @@ export default function App() {
   const [pdfModalAbierto, setPdfModalAbierto] = useState(false);
   const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
   const [modalidadesParaPDF, setModalidadesParaPDF] = useState<string[]>(['cash']);
+  const [idiomaParaPDF, setIdiomaParaPDF] = useState<'es' | 'en'>('es');
 
   // Safe lat/lng: fallback to PR center when field is empty or invalid (avoids Leaflet NaN crash)
   const mapLat = isNaN(parseFloat(coords.lat)) ? 18.2208 : parseFloat(coords.lat);
@@ -634,6 +635,7 @@ export default function App() {
       data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
     ].filter(Boolean).join(', ') || 'Ninguno',
     modalidades: modalidadesParaPDF,
+    idioma:      idiomaParaPDF,
     planes: calculations
       .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
       .map(p => ({
@@ -1348,6 +1350,8 @@ export default function App() {
         modalidades={['cash', 'wh_financial', 'home_depot']}
         modalidadesSeleccionadas={modalidadesParaPDF}
         onModalidadesChange={setModalidadesParaPDF}
+        idioma={idiomaParaPDF}
+        onIdiomaChange={setIdiomaParaPDF}
       />
     </>
   );
