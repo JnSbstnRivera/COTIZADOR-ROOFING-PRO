@@ -1,38 +1,65 @@
-# Windmar Roofing PRO - Cotizador
+# COTIZADOR ROOFING PRO
 
-Este proyecto es un cotizador de alta ingeniería para Windmar Roofing PRO, desarrollado con React, Tailwind CSS y Motion.
+Cotizador de techado para **Windmar Home Puerto Rico**. Incluye medición de área por mapa, tres niveles de servicio y propuesta en PDF.
 
-## 🚀 Despliegue en Netlify (ZIP)
+---
 
-Para subir este proyecto a Netlify mediante un archivo ZIP:
+## ¿Qué hace?
 
-1.  **Descarga el ZIP**: Utiliza la opción de "Export to ZIP" en el menú de configuración (icono de engranaje ⚙️) de AI Studio.
-2.  **Preparación Local**:
-    *   Extrae el contenido en tu computadora.
-    *   Abre una terminal en esa carpeta.
-    *   Ejecuta `npm install` para instalar las dependencias.
-    *   Ejecuta `npm run build` para generar la carpeta `dist`.
-3.  **Subida a Netlify**:
-    *   Ve a [app.netlify.com](https://app.netlify.com).
-    *   Inicia sesión y ve a la sección de "Sites".
-    *   Arrastra la carpeta **`dist`** (que se creó en el paso anterior) al área de carga de Netlify.
-    *   ¡Listo! Tu sitio estará en línea en segundos.
+El asesor dibuja el polígono del techo directamente sobre un mapa (Leaflet), selecciona el nivel de servicio y configura los descuentos aplicables. La herramienta calcula el precio final y genera una propuesta PDF lista para el cliente.
 
-> **Nota**: El archivo `netlify.toml` incluido ya configura las redirecciones necesarias para que la aplicación funcione perfectamente.
+---
 
-## 🛠️ Tecnologías
+## Características
 
-*   **React 19**
-*   **Tailwind CSS 4**
-*   **Motion** (Animaciones)
-*   **Lucide React** (Iconos)
-*   **Leaflet** (Mapas para detección de área)
+- Medición de área por polígono sobre mapa interactivo (Leaflet)
+- Tres niveles de servicio: **Silver / Gold / Platinum**
+- Sistema de descuentos:
+  - Firma y Gana: **-$500**
+  - Cliente VIP: **-$1,000**
+- Cálculo en tiempo real (precio × pies², remoción, pronto pago)
+- Splash screen animado (tema sellado de silicón)
+- Exportación a PDF con propuesta profesional
+- Dark / Light mode
 
-## 📝 Características
+---
 
-*   **Splash Screen Animado**: Representa el sellado de silicón y la protección contra filtraciones.
-*   **Cálculo en Tiempo Real**: Ajuste de precios según pies cuadrados, remoción y pronto pago.
-*   **Sistema de Descuentos**:
-    *   Firma y Gana: -$500
-    *   Cliente VIP: -$1,000
-*   **Exportación a PDF**: Generación de propuestas profesionales al instante.
+## Stack Técnico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4 |
+| Mapas | Leaflet + react-leaflet |
+| PDF | jsPDF + html2canvas + pdf-lib |
+| Animaciones | Motion (Framer Motion) |
+| Iconos | Lucide React |
+| IA | Google Gemini (@google/genai) |
+| Fuentes | Poppins, Inter |
+
+---
+
+## Variables de entorno
+
+```
+GEMINI_API_KEY=
+```
+
+---
+
+## Instalación local
+
+```bash
+npm install
+npm run dev
+# http://localhost:5173
+```
+
+---
+
+## Despliegue
+
+**Producción:** https://cotizador-roofing-pro.vercel.app
+
+---
+
+*Desarrollado para Windmar Home Puerto Rico — Call Center Operations*
