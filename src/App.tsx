@@ -382,6 +382,8 @@ export default function App() {
   const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
   const [modalidadesParaPDF, setModalidadesParaPDF] = useState<string[]>(['cash']);
   const [idiomaParaPDF, setIdiomaParaPDF] = useState<'es' | 'en'>('es');
+  // Promo Mes de las Madres 2026: Platinum al precio de Gold (15% off)
+  const [promoMadresPlatinum, setPromoMadresPlatinum] = useState<boolean>(false);
 
   // Safe lat/lng: fallback to PR center when field is empty or invalid (avoids Leaflet NaN crash)
   const mapLat = isNaN(parseFloat(coords.lat)) ? 18.2208 : parseFloat(coords.lat);
@@ -542,6 +544,47 @@ export default function App() {
   const pmt = (rate: number, nper: number, pv: number) => 
     (pv * rate * Math.pow(1 + rate, nper)) / (Math.pow(1 + rate, nper) - 1);
 
+  // Función reutilizable: calcula los valores de un plan dado un precio por pie² override.
+  // Esto permite calcular Platinum al precio de Gold cuando la promo está activa.
+  const calcPlan = (plan: Plan, pricePerSqFtOverride?: number) => {
+    const ppsf = pricePerSqFtOverride ?? plan.pricePerSqFt;
+    const precioConRemocion = (data.sqft * CONSTANTS.REMOVAL_RATE) * (data.removalPercentage / 100);
+    const precioSinRemocion = data.sqft * ppsf;
+    const precioBaseSinIvu = precioConRemocion + precioSinRemocion;
+
+    let precioConDescuento = precioBaseSinIvu;
+    if (data.clienteVip) precioConDescuento -= 1000;
+    if (data.firmaYGana) precioConDescuento -= 500;
+    precioConDescuento = Math.max(0, precioConDescuento);
+
+    const tax = precioConDescuento * 0.115;
+    const precioConIvu = precioConDescuento + tax;
+
+    const precioAFinanciar = Math.max(0, precioConIvu - data.downPayment);
+
+    const monthly60  = precioAFinanciar > 0 ? pmt(CONSTANTS.TASAS.Y5,  60,  precioAFinanciar) : 0;
+    const monthly84  = precioAFinanciar > 0 ? pmt(CONSTANTS.TASAS.Y7,  84,  precioAFinanciar) : 0;
+    const monthly120 = precioAFinanciar > 0 ? pmt(CONSTANTS.TASAS.Y10, 120, precioAFinanciar) : 0;
+
+    const totalCashWithIvuOriginal = precioBaseSinIvu * CONSTANTS.IVU;
+    const cashWithDiscount = Math.max(0, totalCashWithIvuOriginal - (data.firmaYGana ? 500 : 0) - (data.clienteVip ? 1000 : 0));
+    const cashTotalConIvuFull = cashWithDiscount * 0.90;
+    const cashTotalConIvu = Math.max(0, cashTotalConIvuFull - data.downPayment);
+    const cashValorSinIvu = cashTotalConIvu / CONSTANTS.IVU;
+    const cashIvu = cashTotalConIvu - cashValorSinIvu;
+
+    return {
+      ...plan,
+      base: precioBaseSinIvu,
+      totalCash: totalCashWithIvuOriginal,
+      monthly60, monthly84, monthly120,
+      cashBalance: precioAFinanciar,
+      baseBalance: precioAFinanciar / CONSTANTS.IVU,
+      totalFinanced: monthly120 * 120,
+      cashTotalConIvu, cashValorSinIvu, cashIvu
+    };
+  };
+
   const calculations = useMemo(() => {
     return PLANS.map(plan => {
       // PASO 1: Calcular precio base
@@ -626,6 +669,14 @@ export default function App() {
     } catch { return null; }
   };
 
+  // Cálculo Platinum a precio de Gold ($8.00/pie²) cuando la promo está activa
+  const platinumPlan = PLANS.find(p => p.id === 'platinum')!;
+  const goldPlan     = PLANS.find(p => p.id === 'gold')!;
+  const platinumPromo = useMemo(
+    () => promoMadresPlatinum ? calcPlan(platinumPlan, goldPlan.pricePerSqFt) : null,
+    [promoMadresPlatinum, data, platinumPlan, goldPlan]
+  );
+
   const roofingResumen = {
     sqft: data.sqft,
     removalPct: data.removalPercentage,
@@ -633,23 +684,41 @@ export default function App() {
     descuentos: [
       data.firmaYGana ? 'Firma y Gana (-$500)' : null,
       data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
+      promoMadresPlatinum ? 'Promo Mes de las Madres: Platinum al precio de Gold' : null,
     ].filter(Boolean).join(', ') || 'Ninguno',
     modalidades: modalidadesParaPDF,
     idioma:      idiomaParaPDF,
+    promoMadres: promoMadresPlatinum,
     planes: calculations
       .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
-      .map(p => ({
-        nombre:        p.name,
-        mensual5:      p.monthly60,
-        mensual7:      p.monthly84,
-        mensual10:     p.monthly120,
-        cashTotal:     p.cashTotalConIvu,
-        cashSinIvu:    p.cashValorSinIvu,
-        cashIvu:       p.cashIvu,
-        valorConIvu:   p.cashBalance,
-        valorAntesIvu: p.baseBalance,
-        financiado:    p.cashBalance,
-      })),
+      .map(p => {
+        const isPlatinumPromo = promoMadresPlatinum && p.id === 'platinum' && platinumPromo;
+        // Si Platinum está en promo, usamos los valores promo como "actuales" y guardamos los originales
+        const display = isPlatinumPromo ? platinumPromo! : p;
+        return {
+          nombre:        p.name,
+          mensual5:      display.monthly60,
+          mensual7:      display.monthly84,
+          mensual10:     display.monthly120,
+          cashTotal:     display.cashTotalConIvu,
+          cashSinIvu:    display.cashValorSinIvu,
+          cashIvu:       display.cashIvu,
+          valorConIvu:   display.cashBalance,
+          valorAntesIvu: display.baseBalance,
+          financiado:    display.cashBalance,
+          promoMadres:   isPlatinumPromo ? true : undefined,
+          original: isPlatinumPromo ? {
+            mensual5:      p.monthly60,
+            mensual7:      p.monthly84,
+            mensual10:     p.monthly120,
+            cashTotal:     p.cashTotalConIvu,
+            cashSinIvu:    p.cashValorSinIvu,
+            cashIvu:       p.cashIvu,
+            valorConIvu:   p.cashBalance,
+            valorAntesIvu: p.baseBalance,
+          } : undefined,
+        };
+      }),
   };
 
   const handleGenerateRoofingPDF = async (cliente: ClienteData, consultor: ConsultorData) => {
@@ -1352,6 +1421,8 @@ export default function App() {
         onModalidadesChange={setModalidadesParaPDF}
         idioma={idiomaParaPDF}
         onIdiomaChange={setIdiomaParaPDF}
+        promoMadresPlatinum={promoMadresPlatinum}
+        onPromoMadresPlatinumChange={setPromoMadresPlatinum}
       />
     </>
   );

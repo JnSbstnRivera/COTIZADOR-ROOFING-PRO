@@ -19,6 +19,10 @@ const ICON_BG      = rgb(0.918, 0.945, 0.992)
 const GREEN_CASH   = rgb(0.027, 0.455, 0.267)
 const EMERALD_BG   = rgb(0.878, 0.969, 0.922)
 const HD_GRAY      = rgb(0.42, 0.44, 0.50)
+// Promo Mes de las Madres 2026
+const PINK_PROMO   = rgb(0.910, 0.310, 0.592)   // #E84F97  rosa magenta
+const PINK_DARK    = rgb(0.745, 0.180, 0.443)   // #BE2E71  rosa oscuro
+const PINK_BG      = rgb(1.000, 0.918, 0.953)   // #FFEAF3  rosa muy claro
 
 // ── textos bilingues ───────────────────────────────────────────
 const LABELS = {
@@ -180,8 +184,21 @@ export interface RoofingResumen {
     valorConIvu: number
     valorAntesIvu: number
     financiado: number
+    // Promo Mes de las Madres: si true, este plan se muestra con precio original tachado en rosa
+    promoMadres?: boolean
+    original?: {
+      mensual5: number
+      mensual7: number
+      mensual10: number
+      cashTotal: number
+      cashSinIvu: number
+      cashIvu: number
+      valorConIvu: number
+      valorAntesIvu: number
+    }
   }[]
   idioma?: 'es' | 'en'
+  promoMadres?: boolean   // bandera global: hay al menos un plan con promo
 }
 
 // ── función principal ──────────────────────────────────────────
@@ -418,6 +435,28 @@ function drawCotizacionRoofing(
   page.drawLine({ start: { x: M, y: tableY - 5 }, end: { x: M + 158, y: tableY - 5 }, thickness: 2, color: ORANGE })
   tableY -= 20
 
+  // ── Banner Promo Mes de las Madres ───────────────────────────
+  if (resumen.promoMadres) {
+    const bannerH = 22
+    rect(page, M, tableY - bannerH + 8, dataW, bannerH, PINK_BG)
+    page.drawRectangle({
+      x: M, y: tableY - bannerH + 8, width: dataW, height: bannerH,
+      borderColor: PINK_PROMO, borderWidth: 1.2,
+    })
+    // corazón estilizado a la izquierda
+    drawHeart(page, M + 10, tableY + 1, 5, PINK_PROMO)
+    const promoTxt = lang === 'en'
+      ? 'MOTHER\'S DAY 2026 SPECIAL  -  Platinum at Gold price'
+      : 'PROMO MES DE LAS MADRES 2026  -  Platinum al precio de Gold'
+    text(page, promoTxt, 9.5, M + 22, tableY - 1, bold, PINK_DARK)
+    drawHeart(page, M + dataW - 16, tableY + 1, 5, PINK_PROMO)
+    const validityTxt = lang === 'en'
+      ? 'Valid May 7-14, 2026 - Showroom only'
+      : 'Vigente 7-14 mayo 2026 - Solo en showroom'
+    text(page, validityTxt, 6.5, M + 22, tableY - 11, reg, PINK_DARK)
+    tableY -= bannerH + 6
+  }
+
   const rH   = 15
   const mods = resumen.modalidades.length > 0 ? resumen.modalidades : ['cash']
 
@@ -441,13 +480,26 @@ function drawCotizacionRoofing(
       tableY -= rH + 2
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
-        if (i % 2 === 0) rect(page, M, tableY - 2, dataW, rH, EMERALD_BG)
-        rect(page, c0 - 2, tableY - 1, 52, 13, pc)
-        text(page, plan.nombre,                7, c0 + 1, tableY + 4, bold, WHITE)
-        text(page, `$${fmt(plan.cashTotal)}`,  8, c1,     tableY + 3, bold, GREEN_CASH)
-        text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2,     tableY + 3, reg,  DARK)
-        text(page, `$${fmt(plan.cashIvu)}`,    8, c3,     tableY + 3, reg,  DARK)
-        tableY -= rH + 2
+        const promo = plan.promoMadres === true
+        const rowH  = promo ? rH + 10 : rH
+        if (i % 2 === 0) rect(page, M, tableY - 2 - (promo ? 10 : 0), dataW, rowH, promo ? PINK_BG : EMERALD_BG)
+        rect(page, c0 - 2, tableY - 1, 52, 13, promo ? PINK_PROMO : pc)
+        text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
+        // Si hay promo y existe original: mostrar original tachado arriba, promo en rosa abajo
+        if (promo && plan.original) {
+          drawStrike(page, c1, tableY + 3, `$${fmt(plan.original.cashTotal)}`,  8, reg, GRAY)
+          drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.cashSinIvu)}`, 8, reg, GRAY)
+          drawStrike(page, c3, tableY + 3, `$${fmt(plan.original.cashIvu)}`,    8, reg, GRAY)
+          text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.cashIvu)}`,    8, c3, tableY - 8, bold, PINK_DARK)
+          drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
+        } else {
+          text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY + 3, bold, GREEN_CASH)
+          text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2, tableY + 3, reg,  DARK)
+          text(page, `$${fmt(plan.cashIvu)}`,    8, c3, tableY + 3, reg,  DARK)
+        }
+        tableY -= rowH + 2
       })
     }
 
@@ -471,15 +523,31 @@ function drawCotizacionRoofing(
       tableY -= rH + 2
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
-        if (i % 2 === 0) rect(page, M, tableY - 2, dataW, rH, LIGHT)
-        rect(page, c0 - 2, tableY - 1, 52, 13, pc)
-        text(page, plan.nombre,                   7, c0 + 1, tableY + 4, bold, WHITE)
-        text(page, `$${fmt(plan.mensual5)}`,       7, c1,     tableY + 3, reg,  DARK)
-        text(page, `$${fmt(plan.mensual7)}`,       7, c2,     tableY + 3, reg,  DARK)
-        text(page, `$${fmt(plan.mensual10)}`,      7, c3,     tableY + 3, bold, DARK)
-        text(page, `$${fmt(plan.valorConIvu)}`,    7, c4,     tableY + 3, bold, DARK)
-        text(page, `$${fmt(plan.valorAntesIvu)}`,  7, c5,     tableY + 3, reg,  DARK)
-        tableY -= rH + 2
+        const promo = plan.promoMadres === true
+        const rowH  = promo ? rH + 10 : rH
+        if (i % 2 === 0) rect(page, M, tableY - 2 - (promo ? 10 : 0), dataW, rowH, promo ? PINK_BG : LIGHT)
+        rect(page, c0 - 2, tableY - 1, 52, 13, promo ? PINK_PROMO : pc)
+        text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
+        if (promo && plan.original) {
+          drawStrike(page, c1, tableY + 3, `$${fmt(plan.original.mensual5)}`,      7, reg, GRAY)
+          drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.mensual7)}`,      7, reg, GRAY)
+          drawStrike(page, c3, tableY + 3, `$${fmt(plan.original.mensual10)}`,     7, reg, GRAY)
+          drawStrike(page, c4, tableY + 3, `$${fmt(plan.original.valorConIvu)}`,   7, reg, GRAY)
+          drawStrike(page, c5, tableY + 3, `$${fmt(plan.original.valorAntesIvu)}`, 7, reg, GRAY)
+          text(page, `$${fmt(plan.mensual5)}`,      7, c1, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.mensual7)}`,      7, c2, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.mensual10)}`,     7, c3, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.valorConIvu)}`,   7, c4, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.valorAntesIvu)}`, 7, c5, tableY - 8, bold, PINK_DARK)
+          drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
+        } else {
+          text(page, `$${fmt(plan.mensual5)}`,      7, c1, tableY + 3, reg,  DARK)
+          text(page, `$${fmt(plan.mensual7)}`,      7, c2, tableY + 3, reg,  DARK)
+          text(page, `$${fmt(plan.mensual10)}`,     7, c3, tableY + 3, bold, DARK)
+          text(page, `$${fmt(plan.valorConIvu)}`,   7, c4, tableY + 3, bold, DARK)
+          text(page, `$${fmt(plan.valorAntesIvu)}`, 7, c5, tableY + 3, reg,  DARK)
+        }
+        tableY -= rowH + 2
       })
     }
 
@@ -497,12 +565,22 @@ function drawCotizacionRoofing(
       tableY -= rH + 2
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
-        if (i % 2 === 0) rect(page, M, tableY - 2, dataW, rH, LIGHT)
-        rect(page, c0 - 2, tableY - 1, 52, 13, pc)
-        text(page, plan.nombre,                    7, c0 + 1, tableY + 4, bold, WHITE)
-        text(page, `$${fmt(plan.valorConIvu)}`,    8, c1,     tableY + 3, bold, DARK)
-        text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2,     tableY + 3, reg,  DARK)
-        tableY -= rH + 2
+        const promo = plan.promoMadres === true
+        const rowH  = promo ? rH + 10 : rH
+        if (i % 2 === 0) rect(page, M, tableY - 2 - (promo ? 10 : 0), dataW, rowH, promo ? PINK_BG : LIGHT)
+        rect(page, c0 - 2, tableY - 1, 52, 13, promo ? PINK_PROMO : pc)
+        text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
+        if (promo && plan.original) {
+          drawStrike(page, c1, tableY + 3, `$${fmt(plan.original.valorConIvu)}`,   8, reg, GRAY)
+          drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.valorAntesIvu)}`, 8, reg, GRAY)
+          text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY - 8, bold, PINK_DARK)
+          text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2, tableY - 8, bold, PINK_DARK)
+          drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
+        } else {
+          text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY + 3, bold, DARK)
+          text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2, tableY + 3, reg,  DARK)
+        }
+        tableY -= rowH + 2
       })
     }
   })
@@ -857,4 +935,31 @@ function downloadPDF(bytes: Uint8Array, filename: string) {
   const a    = document.createElement('a')
   a.href = url; a.download = filename; a.click()
   URL.revokeObjectURL(url)
+}
+// Dibuja un corazón sólido (vectorial, sin depender de fuentes que soporten emoji)
+function drawHeart(page: any, cx: number, cy: number, r: number, color: any) {
+  try {
+    // SVG path de un corazón centrado en (0,0) escalado a radio r
+    // pdf-lib drawSvgPath usa (x,y) como origen y eje y invertido
+    const path =
+      `M 0,${-r * 0.25} ` +
+      `C ${-r * 1.1},${r * 0.95} ${-r * 1.4},${-r * 0.4} 0,${-r * 1.5} ` +
+      `C ${r * 1.4},${-r * 0.4} ${r * 1.1},${r * 0.95} 0,${-r * 0.25} Z`
+    page.drawSvgPath(path, { x: cx, y: cy, color, borderColor: color, borderWidth: 0.2 })
+  } catch {
+    // fallback: dos círculos + cuadrado giratorio aproximan un corazón
+    page.drawEllipse({ x: cx - r * 0.45, y: cy + r * 0.2, xScale: r * 0.55, yScale: r * 0.55, color })
+    page.drawEllipse({ x: cx + r * 0.45, y: cy + r * 0.2, xScale: r * 0.55, yScale: r * 0.55, color })
+    page.drawEllipse({ x: cx, y: cy - r * 0.4, xScale: r * 0.85, yScale: r * 0.85, color })
+  }
+}
+// Dibuja un texto tachado (línea horizontal sobre el texto)
+function drawStrike(page: any, x: number, y: number, t: string, size: number, font: any, color: any) {
+  text(page, t, size, x, y, font, color)
+  const w = size * 0.55 * t.length   // ancho aproximado
+  page.drawLine({
+    start: { x, y: y + size * 0.35 },
+    end:   { x: x + w, y: y + size * 0.35 },
+    thickness: 0.6, color,
+  })
 }

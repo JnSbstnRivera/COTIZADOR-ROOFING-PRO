@@ -39,6 +39,9 @@ interface PDFModalProps {
   // Idioma del PDF
   idioma?: 'es' | 'en'
   onIdiomaChange?: (i: 'es' | 'en') => void
+  // Promo Mes de las Madres 2026 — solo ROOFING
+  promoMadresPlatinum?: boolean
+  onPromoMadresPlatinumChange?: (v: boolean) => void
 }
 
 const TITULOS = {
@@ -90,6 +93,7 @@ export function PDFModal({
   planes, planesSeleccionados, onPlanesChange,
   modalidades, modalidadesSeleccionadas, onModalidadesChange,
   idioma = 'es', onIdiomaChange,
+  promoMadresPlatinum, onPromoMadresPlatinumChange,
 }: PDFModalProps) {
 
   const [cliente, setCliente] = useState<ClienteData>({
@@ -327,6 +331,49 @@ export function PDFModal({
                   Selecciona al menos una modalidad de cotizacion.
                 </p>
               )}
+            </section>
+          )}
+
+          {/* ── PROMO MES DE LAS MADRES — solo ROOFING ── */}
+          {tipo === 'roofing' && onPromoMadresPlatinumChange && (
+            <section style={{
+              border: '2px solid #E84F97',
+              borderRadius: 12,
+              padding: 14,
+              background: 'linear-gradient(135deg, #FFEAF3 0%, #FFF5FA 100%)',
+            }}>
+              <div style={{
+                fontSize: 13, fontWeight: 800, color: '#BE2E71',
+                marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: 18 }}>❤️</span>
+                Promo Mes de las Madres 2026
+                <span style={{ fontSize: 18 }}>❤️</span>
+              </div>
+              <p style={{ fontSize: 11, color: '#8E2658', marginBottom: 10, lineHeight: 1.4 }}>
+                Vigente del <b>7 al 14 de mayo 2026</b> · Solo en showrooms (Roosevelt, Mayagüez, Ponce, Hatillo).
+                Se mostrará el precio original tachado junto al precio promocional en rosa.
+              </p>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+                background: promoMadresPlatinum ? '#E84F97' : 'white',
+                border: `2px solid ${promoMadresPlatinum ? '#E84F97' : '#F8B8D4'}`,
+                transition: 'all 0.15s',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={!!promoMadresPlatinum}
+                  onChange={e => onPromoMadresPlatinumChange(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: '#E84F97', cursor: 'pointer' }}
+                />
+                <span style={{
+                  fontSize: 12, fontWeight: 700,
+                  color: promoMadresPlatinum ? 'white' : '#BE2E71',
+                }}>
+                  Platinum al precio de Gold (15% off · ahorro &gt; $3,000)
+                </span>
+              </label>
             </section>
           )}
 
