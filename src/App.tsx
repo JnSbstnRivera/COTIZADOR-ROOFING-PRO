@@ -24,7 +24,8 @@ import {
   Ruler,
   X,
   Sun,
-  Moon
+  Moon,
+  Undo2
 } from 'lucide-react';
 import { PLANS, CONSTANTS, QuoteData, Plan } from './types';
 import { PDFModal, type ClienteData, type ConsultorData } from './components/PDFModal';
@@ -66,17 +67,36 @@ function MapUpdater({ center }: { center: [number, number] }) {
 }
 
 // Component to handle map clicks for manual measurement
-function MapEventsHandler({ 
-  onMapClick, 
-  isManualMode 
-}: { 
-  onMapClick: (latlng: L.LatLng) => void, 
-  isManualMode: boolean 
+// - click: agrega punto (si está en modo manual)
+// - dblclick: confirma el polígono (en modo manual deshabilita el zoom default)
+function MapEventsHandler({
+  onMapClick,
+  onMapDblClick,
+  isManualMode,
+}: {
+  onMapClick: (latlng: L.LatLng) => void,
+  onMapDblClick: () => void,
+  isManualMode: boolean,
 }) {
+  const map = useMap();
+  // Deshabilita el zoom-in por doble click solo mientras se está midiendo manual,
+  // para que el dblclick cierre el polígono en lugar de hacer zoom.
+  useEffect(() => {
+    if (isManualMode) {
+      map.doubleClickZoom.disable();
+    } else {
+      map.doubleClickZoom.enable();
+    }
+  }, [isManualMode, map]);
   useMapEvents({
     click(e) {
       if (isManualMode) {
         onMapClick(e.latlng);
+      }
+    },
+    dblclick() {
+      if (isManualMode) {
+        onMapDblClick();
       }
     },
   });
@@ -456,12 +476,42 @@ export default function App() {
     setManualArea(0);
   };
 
+  // Deshace el último punto trazado en modo manual
+  const undoLastManualPoint = () => {
+    setManualPoints(prev => {
+      const next = prev.slice(0, -1);
+      setManualArea(next.length >= 3 ? calculatePolygonArea(next) : 0);
+      return next;
+    });
+  };
+
+  // Arrastrar un vértice del polígono manual: actualiza punto y recalcula área
+  const updateManualPoint = (idx: number, latlng: L.LatLng) => {
+    setManualPoints(prev => {
+      const next = prev.map((p, i) => i === idx ? latlng : p);
+      setManualArea(next.length >= 3 ? calculatePolygonArea(next) : 0);
+      return next;
+    });
+  };
+
   const confirmManualMeasurement = () => {
     if (manualArea > 0) {
       setData(prev => ({ ...prev, sqft: manualArea }));
       setIsManualMode(false);
       clearManualMeasurement();
     }
+  };
+
+  // Pasa el polígono detectado por Auto-Medir al modo Manual para que el asesor
+  // pueda ajustar vértices, mover puntos o agregar/quitar antes de confirmar.
+  const refineAutoAsManual = () => {
+    if (autoSelectedIdx === null) return;
+    const b = autoBuildings[autoSelectedIdx];
+    if (!b) return;
+    setManualPoints(b.points);
+    setManualArea(b.sqft);
+    clearAutoBuildings();
+    setIsManualMode(true);
   };
 
   const exportMap = async () => {
@@ -1215,25 +1265,43 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Auto y Manual con el mismo peso visual: ambos son válidos. */}
+                {/* Auto = rápido pero depende de OSM. Manual = preciso siempre. */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={fetchFreeRoofArea}
                     disabled={isFetchingArea || isManualMode}
-                    className="py-3 bg-windmar-blue-dark hover:bg-windmar-blue text-white text-xs font-black rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-windmar-blue-dark/20"
+                    className="py-3 px-3 bg-windmar-blue-dark hover:bg-windmar-blue text-white rounded-2xl transition-all flex flex-col items-center justify-center gap-0.5 disabled:opacity-50 shadow-md shadow-windmar-blue-dark/20"
                   >
-                    {isFetchingArea ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} />}
-                    Auto-Medir
+                    <div className="flex items-center gap-2">
+                      {isFetchingArea ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} />}
+                      <span className="text-xs font-black uppercase tracking-wider">Auto-Medir</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-white/70 normal-case tracking-normal">
+                      Medición rápida (OSM)
+                    </span>
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsManualMode(!isManualMode)}
-                    className={`py-3 text-xs font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md ${
-                      isManualMode ? 'bg-windmar-gold text-windmar-blue-dark' : 'bg-windmar-blue-dark text-white hover:bg-windmar-blue shadow-windmar-blue-dark/20'
+                    className={`py-3 px-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-0.5 shadow-md ${
+                      isManualMode
+                        ? 'bg-windmar-gold text-windmar-blue-dark shadow-windmar-gold/30'
+                        : 'bg-windmar-blue-dark text-white hover:bg-windmar-blue shadow-windmar-blue-dark/20'
                     }`}
                   >
-                    <Maximize2 size={16} />
-                    {isManualMode ? 'Terminar' : 'Manual'}
+                    <div className="flex items-center gap-2">
+                      <Ruler size={16} />
+                      <span className="text-xs font-black uppercase tracking-wider">
+                        {isManualMode ? 'Terminar Manual' : 'Medir Manual'}
+                      </span>
+                    </div>
+                    <span className={`text-[9px] font-bold normal-case tracking-normal ${
+                      isManualMode ? 'text-windmar-blue-dark/70' : 'text-white/70'
+                    }`}>
+                      {isManualMode ? 'Click en el mapa' : 'Medición precisa (a mano)'}
+                    </span>
                   </motion.button>
                 </div>
 
@@ -1274,6 +1342,14 @@ export default function App() {
                         );
                       })}
                     </div>
+                    {/* Refinar: pasa el polígono al modo Manual para corregir vértices */}
+                    <button
+                      onClick={refineAutoAsManual}
+                      className="w-full py-1.5 mt-1 bg-windmar-blue-dark hover:bg-windmar-blue text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Ruler size={12} />
+                      Ajustar este polígono manualmente
+                    </button>
                   </div>
                 )}
 
@@ -1335,6 +1411,7 @@ export default function App() {
                     maxZoom={23}
                     style={{ height: '100%', width: '100%' }}
                     zoomControl={false}
+                    doubleClickZoom={!isManualMode}
                   >
                     <TileLayer
                       attribution={mapLayer === 'satellite' ? '&copy; Esri' : '&copy; OpenStreetMap'}
@@ -1345,22 +1422,40 @@ export default function App() {
                       maxZoom={23}
                       maxNativeZoom={19}
                     />
-                    <MapEventsHandler onMapClick={handleMapClick} isManualMode={isManualMode} />
+                    <MapEventsHandler
+                      onMapClick={handleMapClick}
+                      onMapDblClick={confirmManualMeasurement}
+                      isManualMode={isManualMode}
+                    />
                     {!isManualMode && (mapLat !== 18.2208 || mapLng !== -66.5901) && (
                       <Marker position={[mapLat, mapLng]} />
                     )}
                     {manualPoints.length > 0 && (
                       <>
-                        {manualPoints.map((p, i) => (
-                          <Marker
-                            key={i}
-                            position={p}
-                            icon={L.divIcon({
-                              className: 'bg-windmar-gold w-3 h-3 rounded-full border border-white shadow-lg',
-                              iconSize: [12, 12]
-                            })}
-                          />
-                        ))}
+                        {manualPoints.map((p, i) => {
+                          const isFirst = i === 0;
+                          const canClose = manualPoints.length >= 3;
+                          // El primer punto se hace más grande y resalta cuando se puede cerrar el polígono
+                          const highlightFirst = isFirst && canClose;
+                          return (
+                            <Marker
+                              key={i}
+                              position={p}
+                              draggable={true}
+                              eventHandlers={{
+                                dragend: (e) => updateManualPoint(i, (e.target as L.Marker).getLatLng()),
+                                click: () => { if (highlightFirst) confirmManualMeasurement(); },
+                              }}
+                              icon={L.divIcon({
+                                className: highlightFirst
+                                  ? 'flex items-center justify-center bg-emerald-500 rounded-full border-2 border-white shadow-xl ring-4 ring-emerald-300/50 animate-pulse text-white text-[10px] font-black'
+                                  : 'bg-windmar-gold rounded-full border border-white shadow-lg',
+                                iconSize: highlightFirst ? [22, 22] : [12, 12],
+                                html: highlightFirst ? '✓' : '',
+                              })}
+                            />
+                          );
+                        })}
                         {manualPoints.length >= 3 ? (
                           <Polygon positions={manualPoints} pathOptions={{ color: '#f29e1f', fillColor: '#f29e1f', fillOpacity: 0.3, weight: 3 }} />
                         ) : (
@@ -1391,38 +1486,58 @@ export default function App() {
 
                   <AnimatePresence>
                     {isManualMode && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         className="absolute bottom-4 left-4 right-4 z-[1001]"
                       >
-                        <div className="p-3 rounded-xl border border-white/20 flex justify-between items-center shadow-xl" style={{ backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)' }}>
-                          <div>
-                            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Área Trazada</p>
-                            <p className="text-lg font-black" style={{ color: '#f29e1f' }}>
-                              {manualPoints.length < 3 ? 'Trace 3 puntos...' : `${manualArea} ft²`}
-                            </p>
+                        <div className="p-3 rounded-xl border border-white/20 shadow-xl" style={{ backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)' }}>
+                          <div className="flex justify-between items-center gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">
+                                {manualPoints.length === 0 ? 'Modo Manual' : `${manualPoints.length} ${manualPoints.length === 1 ? 'punto' : 'puntos'}`}
+                              </p>
+                              <p className="text-lg font-black truncate" style={{ color: '#f29e1f' }}>
+                                {manualPoints.length < 3 ? `Trace ${3 - manualPoints.length} ${manualPoints.length === 2 ? 'punto más' : 'puntos más'}...` : `${manualArea.toLocaleString()} ft²`}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={undoLastManualPoint}
+                                disabled={manualPoints.length === 0}
+                                className="p-2 bg-white/10 rounded-lg text-white disabled:opacity-30"
+                                title="Deshacer último punto"
+                              >
+                                <Undo2 size={16} />
+                              </motion.button>
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={clearManualMeasurement}
+                                disabled={manualPoints.length === 0}
+                                className="p-2 bg-white/10 rounded-lg text-white disabled:opacity-30"
+                                title="Reiniciar"
+                              >
+                                <RefreshCw size={16} />
+                              </motion.button>
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={confirmManualMeasurement}
+                                disabled={manualPoints.length < 3}
+                                className="px-4 py-1.5 text-windmar-dark font-black text-xs rounded-lg disabled:opacity-50"
+                                style={{ backgroundColor: '#f29e1f' }}
+                              >
+                                APLICAR
+                              </motion.button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <motion.button 
-                              whileTap={{ scale: 0.9 }}
-                              onClick={clearManualMeasurement} 
-                              className="p-2 bg-white/10 rounded-lg text-white" 
-                              title="Reiniciar"
-                            >
-                              <RefreshCw size={16} />
-                            </motion.button>
-                            <motion.button 
-                              whileTap={{ scale: 0.95 }}
-                              onClick={confirmManualMeasurement} 
-                              disabled={manualPoints.length < 3}
-                              className="px-4 py-1.5 text-windmar-dark font-black text-xs rounded-lg disabled:opacity-50"
-                              style={{ backgroundColor: '#f29e1f' }}
-                            >
-                              APLICAR
-                            </motion.button>
-                          </div>
+                          {/* Tip contextual: muestra cómo cerrar el polígono y cómo editarlo */}
+                          <p className="mt-2 text-[9px] text-slate-400/80 leading-snug">
+                            {manualPoints.length >= 3
+                              ? '✓ Doble-click en el mapa, click en el punto verde, o APLICAR. Arrastra puntos para corregir.'
+                              : '💡 Haz click en el mapa para marcar las esquinas del techo. Puedes arrastrar puntos después.'}
+                          </p>
                         </div>
                       </motion.div>
                     )}
