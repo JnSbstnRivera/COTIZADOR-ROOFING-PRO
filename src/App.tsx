@@ -377,6 +377,13 @@ export default function App() {
   const [manualPoints, setManualPoints] = useState<L.LatLng[]>([]);
   const [manualArea, setManualArea] = useState<number>(0);
   const [mapLayer, setMapLayer] = useState<'satellite' | 'streets'>('satellite');
+
+  // Auto-Medir: candidatos detectados por Overpass (top 3 más cercanos)
+  type AutoBuilding = { id: string; points: L.LatLng[]; sqft: number; distance: number };
+  const [autoBuildings, setAutoBuildings] = useState<AutoBuilding[]>([]);
+  const [autoSelectedIdx, setAutoSelectedIdx] = useState<number | null>(null);
+  const autoAbortRef = useRef<AbortController | null>(null);
+
   const [isExporting, setIsExporting] = useState(false);
   const [pdfModalAbierto, setPdfModalAbierto] = useState(false);
   const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
@@ -388,6 +395,19 @@ export default function App() {
   // Safe lat/lng: fallback to PR center when field is empty or invalid (avoids Leaflet NaN crash)
   const mapLat = isNaN(parseFloat(coords.lat)) ? 18.2208 : parseFloat(coords.lat);
   const mapLng = isNaN(parseFloat(coords.lng)) ? -66.5901 : parseFloat(coords.lng);
+
+  // Si cambia la coordenada, descartamos el resultado previo de Auto-Medir
+  // (sería del edificio anterior y confunde al usuario)
+  useEffect(() => {
+    if (autoBuildings.length > 0) clearAutoBuildings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords.lat, coords.lng]);
+
+  // Si el usuario entra a modo Manual, limpiamos lo de Auto-Medir
+  useEffect(() => {
+    if (isManualMode && autoBuildings.length > 0) clearAutoBuildings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isManualMode]);
 
   // Ref for dropdown outside-click detection
   const discountRef = useRef<HTMLDivElement>(null);
@@ -468,6 +488,59 @@ export default function App() {
     }
   };
 
+  // ── Helpers de geometría (Auto-Medir) ────────────────────────────
+  // Calcula el área de un polígono geo (lat/lon) en pies cuadrados
+  const computePolygonSqft = (nodes: Array<{ lat: number; lon: number }>) => {
+    if (nodes.length < 3) return 0;
+    const refLat = nodes[0].lat;
+    const refLon = nodes[0].lon;
+    const cosLat = Math.cos(refLat * Math.PI / 180);
+    const R = 6378137;
+    const pts = nodes.map(n => ({
+      x: (n.lon - refLon) * (Math.PI / 180) * R * cosLat,
+      y: (n.lat - refLat) * (Math.PI / 180) * R,
+    }));
+    let area = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i + 1) % pts.length;
+      area += pts[i].x * pts[j].y;
+      area -= pts[j].x * pts[i].y;
+    }
+    return Math.round(Math.abs(area) / 2 * 10.7639);
+  };
+
+  // Centroide simple promediando lat/lon
+  const polygonCentroid = (nodes: Array<{ lat: number; lon: number }>) => {
+    const lat = nodes.reduce((s, p) => s + p.lat, 0) / nodes.length;
+    const lon = nodes.reduce((s, p) => s + p.lon, 0) / nodes.length;
+    return { lat, lon };
+  };
+
+  // Distancia haversine en metros entre dos puntos lat/lon
+  const haversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6378137;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  };
+
+  // Selecciona un candidato de Auto-Medir: aplica su sqft y lo marca como activo
+  const selectAutoBuilding = (idx: number) => {
+    const b = autoBuildings[idx];
+    if (!b) return;
+    setAutoSelectedIdx(idx);
+    setData(prev => ({ ...prev, sqft: b.sqft }));
+  };
+
+  // Limpia el resultado de Auto-Medir (al entrar a Manual o al cambiar coords)
+  const clearAutoBuildings = () => {
+    setAutoBuildings([]);
+    setAutoSelectedIdx(null);
+  };
+
   const fetchFreeRoofArea = async () => {
     const lat = parseFloat(coords.lat);
     const lng = parseFloat(coords.lng);
@@ -483,55 +556,68 @@ export default function App() {
       return;
     }
 
+    // Cancelar request anterior si está en curso
+    if (autoAbortRef.current) autoAbortRef.current.abort();
+    const controller = new AbortController();
+    autoAbortRef.current = controller;
+
     setIsFetchingArea(true);
     setAreaError(null);
+    clearAutoBuildings();
+
+    // Radio progresivo: empieza estrecho y va abriendo si no encuentra
+    const radii = [50, 100, 200, 500];
+    let rawBuildings: any[] = [];
+    let usedRadius = 0;
 
     try {
-      const query = `[out:json];way(around:100,${lat},${lng})["building"];out geom;`;
-      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-
-      if (!response.ok) throw new Error('Error al conectar con OpenStreetMap. Intenta de nuevo.');
-
-      const dataJson = await response.json();
-      const buildings = dataJson.elements;
-
-      if (!buildings || buildings.length === 0) {
-        throw new Error('No se encontró ningún edificio en OpenStreetMap para estas coordenadas. Usa el modo Manual.');
+      for (const radius of radii) {
+        const query = `[out:json][timeout:15];way(around:${radius},${lat},${lng})["building"];out geom;`;
+        const response = await fetch(
+          `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) continue;
+        const dataJson = await response.json();
+        if (dataJson.elements && dataJson.elements.length > 0) {
+          rawBuildings = dataJson.elements;
+          usedRadius = radius;
+          break;
+        }
       }
 
-      const building = buildings[0];
-      const nodes = building.geometry;
+      if (rawBuildings.length === 0) {
+        throw new Error('No se encontró ningún edificio en OpenStreetMap dentro de 500m. OSM tiene huecos en zonas residenciales de PR — usa el modo Manual para trazar el techo a mano.');
+      }
 
-      if (nodes && nodes.length > 2) {
-        // Coordenadas relativas al primer nodo para evitar pérdida de precisión numérica
-        const refLat = nodes[0].lat;
-        const refLon = nodes[0].lon;
-        const cosLat = Math.cos(refLat * Math.PI / 180);
-        const R = 6378137;
+      // Procesar: área + centroide + distancia → ordenar por cercanía → top 3
+      const processed: AutoBuilding[] = rawBuildings
+        .filter((b: any) => Array.isArray(b.geometry) && b.geometry.length > 2)
+        .map((b: any) => {
+          const nodes = b.geometry as Array<{ lat: number; lon: number }>;
+          const sqft = computePolygonSqft(nodes);
+          const c = polygonCentroid(nodes);
+          const distance = haversineMeters(lat, lng, c.lat, c.lon);
+          const points = nodes.map(n => L.latLng(n.lat, n.lon));
+          return { id: String(b.id), points, sqft, distance };
+        })
+        .filter(b => b.sqft >= 100)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 3);
 
-        const points = nodes.map((n: any) => ({
-          x: (n.lon - refLon) * (Math.PI / 180) * R * cosLat,
-          y: (n.lat - refLat) * (Math.PI / 180) * R,
-        }));
+      if (processed.length === 0) {
+        throw new Error('Encontramos edificios pero todos son demasiado pequeños (<100 ft²). Probablemente no son casas. Usa el modo Manual.');
+      }
 
-        let area = 0;
-        for (let i = 0; i < points.length; i++) {
-          const j = (i + 1) % points.length;
-          area += points[i].x * points[j].y;
-          area -= points[j].x * points[i].y;
-        }
-        const areaM2  = Math.abs(area) / 2;
-        const areaSqFt = Math.round(areaM2 * 10.7639);
-
-        if (areaSqFt < 100) {
-          throw new Error(`Área detectada (${areaSqFt} ft²) demasiado pequeña. Verifica las coordenadas o usa el modo Manual.`);
-        }
-
-        setData(prev => ({ ...prev, sqft: areaSqFt }));
-      } else {
-        throw new Error('No se pudo obtener la geometría del edificio. Usa el modo Manual.');
+      setAutoBuildings(processed);
+      setAutoSelectedIdx(0);
+      setData(prev => ({ ...prev, sqft: processed[0].sqft }));
+      // Si tuvimos que abrir el radio, lo informamos en lugar de error
+      if (usedRadius >= 200) {
+        setAreaError(`Solo encontramos edificios a ${usedRadius}m del punto. Verifica que sea el correcto en el mapa.`);
       }
     } catch (error: any) {
+      if (error.name === 'AbortError') return;
       setAreaError(error.message || 'Error al obtener datos. Intenta de nuevo o usa el modo Manual.');
     } finally {
       setIsFetchingArea(false);
@@ -1151,6 +1237,46 @@ export default function App() {
                   </motion.button>
                 </div>
 
+                {/* Resultado Auto-Medir: muestra candidato seleccionado + alternativas si las hay */}
+                {autoBuildings.length > 0 && (
+                  <div className="flex flex-col gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl px-3 py-2.5 mb-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                          {autoBuildings.length === 1
+                            ? 'Edificio detectado y medido.'
+                            : `Detectamos ${autoBuildings.length} edificios cerca. Elige el correcto en el mapa o aquí abajo.`}
+                        </p>
+                        <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5 font-semibold">
+                          El polígono verde es el que estás midiendo. Si no es el correcto, prueba otra opción o usa <span className="font-black">Manual</span>.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {autoBuildings.map((b, i) => {
+                        const sel = i === autoSelectedIdx;
+                        return (
+                          <button
+                            key={b.id}
+                            onClick={() => selectAutoBuilding(i)}
+                            className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${
+                              sel
+                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                                : 'bg-white dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100'
+                            }`}
+                          >
+                            Opción {i + 1}
+                            <span className="block text-[9px] font-bold opacity-90 normal-case tracking-normal">
+                              {b.sqft.toLocaleString()} ft² · {Math.round(b.distance)}m
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Error Auto-Medir */}
                 {areaError && (
                   <div className="flex flex-col gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl px-3 py-2.5 mb-3">
@@ -1242,6 +1368,24 @@ export default function App() {
                         )}
                       </>
                     )}
+                    {/* Polígonos detectados por Auto-Medir: verde = seleccionado, gris = alternativas clickables */}
+                    {autoBuildings.map((b, idx) => {
+                      const selected = idx === autoSelectedIdx;
+                      return (
+                        <Polygon
+                          key={b.id}
+                          positions={b.points}
+                          pathOptions={{
+                            color:       selected ? '#10b981' : '#94a3b8',
+                            fillColor:   selected ? '#10b981' : '#94a3b8',
+                            fillOpacity: selected ? 0.4 : 0.15,
+                            weight:      selected ? 3 : 2,
+                            dashArray:   selected ? undefined : '6 4',
+                          }}
+                          eventHandlers={{ click: () => selectAutoBuilding(idx) }}
+                        />
+                      );
+                    })}
                     <MapUpdater center={[mapLat, mapLng]} />
                   </MapContainer>
 
