@@ -23,6 +23,10 @@ const HD_GRAY      = rgb(0.42, 0.44, 0.50)
 const PINK_PROMO   = rgb(0.910, 0.310, 0.592)   // #E84F97  rosa magenta
 const PINK_DARK    = rgb(0.745, 0.180, 0.443)   // #BE2E71  rosa oscuro
 const PINK_BG      = rgb(1.000, 0.918, 0.953)   // #FFEAF3  rosa muy claro
+// Promoción Droguerías (tema farmacia)
+const PHARM_GREEN  = rgb(0.059, 0.616, 0.345)   // #0F9D58  verde farmacia
+const PHARM_DARK   = rgb(0.024, 0.400, 0.251)   // #066647  verde oscuro
+const PHARM_BG     = rgb(0.910, 0.973, 0.941)   // #E8F8F0  verde muy claro
 
 // ── textos bilingues ───────────────────────────────────────────
 const LABELS = {
@@ -186,6 +190,8 @@ export interface RoofingResumen {
     financiado: number
     // Promo Mes de las Madres: si true, este plan se muestra con precio original tachado en rosa
     promoMadres?: boolean
+    // Promoción Droguerías: si true, plan con precio original tachado en verde farmacia
+    drogueria?: boolean
     original?: {
       mensual5: number
       mensual7: number
@@ -199,6 +205,11 @@ export interface RoofingResumen {
   }[]
   idioma?: 'es' | 'en'
   promoMadres?: boolean   // bandera global: hay al menos un plan con promo
+  // Promoción Droguerías
+  drogueria?: {
+    nombre: string
+    porcentaje: number   // entero 1-100
+  }
 }
 
 // ── función principal ──────────────────────────────────────────
@@ -457,6 +468,28 @@ function drawCotizacionRoofing(
     tableY -= bannerH + 6
   }
 
+  // ── Banner Promoción Droguerías ──────────────────────────────
+  if (resumen.drogueria) {
+    const bannerH = 26
+    rect(page, M, tableY - bannerH + 8, dataW, bannerH, PHARM_BG)
+    page.drawRectangle({
+      x: M, y: tableY - bannerH + 8, width: dataW, height: bannerH,
+      borderColor: PHARM_GREEN, borderWidth: 1.4,
+    })
+    // Cruces farmacéuticas a los lados
+    drawCross(page, M + 12, tableY + 1, 6, PHARM_GREEN)
+    drawCross(page, M + dataW - 18, tableY + 1, 6, PHARM_GREEN)
+    const drogTitle = lang === 'en'
+      ? `PHARMACY PROMOTION - ${resumen.drogueria.nombre.toUpperCase()} - ${resumen.drogueria.porcentaje}% OFF`
+      : `PROMOCION DROGUERIAS - ${resumen.drogueria.nombre.toUpperCase()} - ${resumen.drogueria.porcentaje}% OFF`
+    text(page, drogTitle, 10, M + 26, tableY, bold, PHARM_DARK)
+    const drogSub = lang === 'en'
+      ? 'Discount applied to entire financing - Original price crossed out, new price in green'
+      : 'Descuento aplicado a todo el financiamiento - Precio original tachado, nuevo en verde'
+    text(page, drogSub, 6.5, M + 26, tableY - 12, reg, PHARM_DARK)
+    tableY -= bannerH + 6
+  }
+
   const rH   = 15
   const mods = resumen.modalidades.length > 0 ? resumen.modalidades : ['cash']
 
@@ -481,19 +514,24 @@ function drawCotizacionRoofing(
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         const promo = plan.promoMadres === true
-        const rowH  = promo ? rH + 10 : rH
-        if (i % 2 === 0) rect(page, M, tableY - 2 - (promo ? 10 : 0), dataW, rowH, promo ? PINK_BG : EMERALD_BG)
-        rect(page, c0 - 2, tableY - 1, 52, 13, promo ? PINK_PROMO : pc)
+        const drog  = plan.drogueria === true
+        const tinted = promo || drog
+        const tColor = drog ? PHARM_GREEN : promo ? PINK_PROMO : pc
+        const tDark  = drog ? PHARM_DARK  : promo ? PINK_DARK  : DARK
+        const tBg    = drog ? PHARM_BG    : promo ? PINK_BG    : EMERALD_BG
+        const rowH  = tinted ? rH + 10 : rH
+        if (i % 2 === 0) rect(page, M, tableY - 2 - (tinted ? 10 : 0), dataW, rowH, tBg)
+        rect(page, c0 - 2, tableY - 1, 52, 13, tColor)
         text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
-        // Si hay promo y existe original: mostrar original tachado arriba, promo en rosa abajo
-        if (promo && plan.original) {
+        if (tinted && plan.original) {
           drawStrike(page, c1, tableY + 3, `$${fmt(plan.original.cashTotal)}`,  8, reg, GRAY)
           drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.cashSinIvu)}`, 8, reg, GRAY)
           drawStrike(page, c3, tableY + 3, `$${fmt(plan.original.cashIvu)}`,    8, reg, GRAY)
-          text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.cashIvu)}`,    8, c3, tableY - 8, bold, PINK_DARK)
-          drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
+          text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.cashIvu)}`,    8, c3, tableY - 8, bold, tDark)
+          if (drog) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
+          else      drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
         } else {
           text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY + 3, bold, GREEN_CASH)
           text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2, tableY + 3, reg,  DARK)
@@ -524,22 +562,28 @@ function drawCotizacionRoofing(
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         const promo = plan.promoMadres === true
-        const rowH  = promo ? rH + 10 : rH
-        if (i % 2 === 0) rect(page, M, tableY - 2 - (promo ? 10 : 0), dataW, rowH, promo ? PINK_BG : LIGHT)
-        rect(page, c0 - 2, tableY - 1, 52, 13, promo ? PINK_PROMO : pc)
+        const drog  = plan.drogueria === true
+        const tinted = promo || drog
+        const tColor = drog ? PHARM_GREEN : promo ? PINK_PROMO : pc
+        const tDark  = drog ? PHARM_DARK  : promo ? PINK_DARK  : DARK
+        const tBg    = drog ? PHARM_BG    : promo ? PINK_BG    : LIGHT
+        const rowH  = tinted ? rH + 10 : rH
+        if (i % 2 === 0) rect(page, M, tableY - 2 - (tinted ? 10 : 0), dataW, rowH, tBg)
+        rect(page, c0 - 2, tableY - 1, 52, 13, tColor)
         text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
-        if (promo && plan.original) {
+        if (tinted && plan.original) {
           drawStrike(page, c1, tableY + 3, `$${fmt(plan.original.mensual5)}`,      7, reg, GRAY)
           drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.mensual7)}`,      7, reg, GRAY)
           drawStrike(page, c3, tableY + 3, `$${fmt(plan.original.mensual10)}`,     7, reg, GRAY)
           drawStrike(page, c4, tableY + 3, `$${fmt(plan.original.valorConIvu)}`,   7, reg, GRAY)
           drawStrike(page, c5, tableY + 3, `$${fmt(plan.original.valorAntesIvu)}`, 7, reg, GRAY)
-          text(page, `$${fmt(plan.mensual5)}`,      7, c1, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.mensual7)}`,      7, c2, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.mensual10)}`,     7, c3, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.valorConIvu)}`,   7, c4, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.valorAntesIvu)}`, 7, c5, tableY - 8, bold, PINK_DARK)
-          drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
+          text(page, `$${fmt(plan.mensual5)}`,      7, c1, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.mensual7)}`,      7, c2, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.mensual10)}`,     7, c3, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.valorConIvu)}`,   7, c4, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.valorAntesIvu)}`, 7, c5, tableY - 8, bold, tDark)
+          if (drog) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
+          else      drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
         } else {
           text(page, `$${fmt(plan.mensual5)}`,      7, c1, tableY + 3, reg,  DARK)
           text(page, `$${fmt(plan.mensual7)}`,      7, c2, tableY + 3, reg,  DARK)
@@ -566,16 +610,22 @@ function drawCotizacionRoofing(
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         const promo = plan.promoMadres === true
-        const rowH  = promo ? rH + 10 : rH
-        if (i % 2 === 0) rect(page, M, tableY - 2 - (promo ? 10 : 0), dataW, rowH, promo ? PINK_BG : LIGHT)
-        rect(page, c0 - 2, tableY - 1, 52, 13, promo ? PINK_PROMO : pc)
+        const drog  = plan.drogueria === true
+        const tinted = promo || drog
+        const tColor = drog ? PHARM_GREEN : promo ? PINK_PROMO : pc
+        const tDark  = drog ? PHARM_DARK  : promo ? PINK_DARK  : DARK
+        const tBg    = drog ? PHARM_BG    : promo ? PINK_BG    : LIGHT
+        const rowH  = tinted ? rH + 10 : rH
+        if (i % 2 === 0) rect(page, M, tableY - 2 - (tinted ? 10 : 0), dataW, rowH, tBg)
+        rect(page, c0 - 2, tableY - 1, 52, 13, tColor)
         text(page, plan.nombre, 7, c0 + 1, tableY + 4, bold, WHITE)
-        if (promo && plan.original) {
+        if (tinted && plan.original) {
           drawStrike(page, c1, tableY + 3, `$${fmt(plan.original.valorConIvu)}`,   8, reg, GRAY)
           drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.valorAntesIvu)}`, 8, reg, GRAY)
-          text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY - 8, bold, PINK_DARK)
-          text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2, tableY - 8, bold, PINK_DARK)
-          drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
+          text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY - 8, bold, tDark)
+          text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2, tableY - 8, bold, tDark)
+          if (drog) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
+          else      drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
         } else {
           text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY + 3, bold, DARK)
           text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2, tableY + 3, reg,  DARK)
@@ -952,6 +1002,15 @@ function drawHeart(page: any, cx: number, cy: number, r: number, color: any) {
     page.drawEllipse({ x: cx + r * 0.45, y: cy + r * 0.2, xScale: r * 0.55, yScale: r * 0.55, color })
     page.drawEllipse({ x: cx, y: cy - r * 0.4, xScale: r * 0.85, yScale: r * 0.85, color })
   }
+}
+// Dibuja una cruz farmacéutica (símbolo + verde de droguería)
+function drawCross(page: any, cx: number, cy: number, r: number, color: any) {
+  const arm = r * 1.6
+  const thick = r * 0.6
+  // brazo horizontal
+  page.drawRectangle({ x: cx - arm / 2, y: cy - thick / 2, width: arm, height: thick, color })
+  // brazo vertical
+  page.drawRectangle({ x: cx - thick / 2, y: cy - arm / 2, width: thick, height: arm, color })
 }
 // Dibuja un texto tachado (línea horizontal sobre el texto)
 function drawStrike(page: any, x: number, y: number, t: string, size: number, font: any, color: any) {

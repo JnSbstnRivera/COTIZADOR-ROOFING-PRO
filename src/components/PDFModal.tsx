@@ -42,6 +42,9 @@ interface PDFModalProps {
   // Promo Mes de las Madres 2026 — solo ROOFING
   promoMadresPlatinum?: boolean
   onPromoMadresPlatinumChange?: (v: boolean) => void
+  // Promoción Droguerías
+  droguerias?: { activa: boolean; nombre: string; porcentaje: number }
+  onDrogueriasChange?: (v: { activa: boolean; nombre: string; porcentaje: number }) => void
 }
 
 const TITULOS = {
@@ -94,6 +97,7 @@ export function PDFModal({
   modalidades, modalidadesSeleccionadas, onModalidadesChange,
   idioma = 'es', onIdiomaChange,
   promoMadresPlatinum, onPromoMadresPlatinumChange,
+  droguerias, onDrogueriasChange,
 }: PDFModalProps) {
 
   const [cliente, setCliente] = useState<ClienteData>({
@@ -104,11 +108,25 @@ export function PDFModal({
   })
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  // Estado del dropdown de Promociones
+  const [promosOpen, setPromosOpen] = useState(false)
+  const [madresOpen, setMadresOpen] = useState(true)
+  const [drogOpen,   setDrogOpen]   = useState(true)
 
   const handleGenerate = async () => {
     if (!cliente.nombre.trim() || !consultor.nombre.trim()) {
       setError('Nombre del cliente y consultor son requeridos.')
       return
+    }
+    if (droguerias?.activa) {
+      if (!droguerias.nombre.trim()) {
+        setError('Ingresa el nombre de la droguería antes de generar el PDF.')
+        return
+      }
+      if (!droguerias.porcentaje || droguerias.porcentaje < 1) {
+        setError('Ingresa un porcentaje de descuento válido (1-50).')
+        return
+      }
     }
     setError('')
     setLoading(true)
@@ -334,46 +352,211 @@ export function PDFModal({
             </section>
           )}
 
-          {/* ── PROMO MES DE LAS MADRES — solo ROOFING ── */}
-          {tipo === 'roofing' && onPromoMadresPlatinumChange && (
+          {/* ── DROPDOWN DE PROMOCIONES ── */}
+          {tipo === 'roofing' && (onPromoMadresPlatinumChange || onDrogueriasChange) && (
             <section style={{
-              border: '2px solid #E84F97',
-              borderRadius: 12,
-              padding: 14,
-              background: 'linear-gradient(135deg, #FFEAF3 0%, #FFF5FA 100%)',
+              border: '1.5px solid #d0d9ef', borderRadius: 12, overflow: 'hidden',
             }}>
-              <div style={{
-                fontSize: 13, fontWeight: 800, color: '#BE2E71',
-                marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <span style={{ fontSize: 18 }}>❤️</span>
-                Promo Mes de las Madres 2026
-                <span style={{ fontSize: 18 }}>❤️</span>
-              </div>
-              <p style={{ fontSize: 11, color: '#8E2658', marginBottom: 10, lineHeight: 1.4 }}>
-                Vigente del <b>7 al 14 de mayo 2026</b> · Solo en showrooms (Roosevelt, Mayagüez, Ponce, Hatillo).
-                Se mostrará el precio original tachado junto al precio promocional en rosa.
-              </p>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-                background: promoMadresPlatinum ? '#E84F97' : 'white',
-                border: `2px solid ${promoMadresPlatinum ? '#E84F97' : '#F8B8D4'}`,
-                transition: 'all 0.15s',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={!!promoMadresPlatinum}
-                  onChange={e => onPromoMadresPlatinumChange(e.target.checked)}
-                  style={{ width: 18, height: 18, accentColor: '#E84F97', cursor: 'pointer' }}
-                />
-                <span style={{
-                  fontSize: 12, fontWeight: 700,
-                  color: promoMadresPlatinum ? 'white' : '#BE2E71',
-                }}>
-                  Platinum al precio de Gold (15% off · ahorro &gt; $3,000)
+              <button
+                type="button"
+                onClick={() => setPromosOpen(o => !o)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px', cursor: 'pointer',
+                  background: 'linear-gradient(90deg, #fff7fb 0%, #f3fbf6 100%)',
+                  border: 'none', borderBottom: promosOpen ? '1.5px solid #d0d9ef' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#1a56c4', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🎁 Promociones disponibles
                 </span>
-              </label>
+                <span style={{ fontSize: 11, color: '#777' }}>
+                  {(promoMadresPlatinum || droguerias?.activa) && (
+                    <span style={{
+                      background: promoMadresPlatinum ? '#E84F97' : '#0F9D58',
+                      color: 'white', padding: '2px 8px', borderRadius: 10, fontWeight: 700, marginRight: 6,
+                    }}>
+                      {promoMadresPlatinum ? '❤ Madres activa' : '⚕ Drogueria activa'}
+                    </span>
+                  )}
+                  {promosOpen ? '▴' : '▾'}
+                </span>
+              </button>
+
+              {promosOpen && (
+                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                  {/* ── Mother's Day ── */}
+                  {onPromoMadresPlatinumChange && (
+                    <div style={{
+                      border: `2px solid ${promoMadresPlatinum ? '#E84F97' : '#F8B8D4'}`,
+                      borderRadius: 10, overflow: 'hidden',
+                      background: 'linear-gradient(135deg, #FFEAF3 0%, #FFF5FA 100%)',
+                      opacity: droguerias?.activa ? 0.45 : 1,
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => setMadresOpen(o => !o)}
+                        style={{
+                          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer',
+                          fontSize: 12.5, fontWeight: 800, color: '#BE2E71',
+                        }}
+                      >
+                        <span>❤️ Mes de las Madres 2026 ❤️</span>
+                        <span>{madresOpen ? '▴' : '▾'}</span>
+                      </button>
+                      {madresOpen && (
+                        <div style={{ padding: '0 12px 12px' }}>
+                          <p style={{ fontSize: 11, color: '#8E2658', marginBottom: 10, lineHeight: 1.4 }}>
+                            Vigente del <b>7 al 14 de mayo 2026</b> · Solo en showrooms.
+                          </p>
+                          <label style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 12px', borderRadius: 8,
+                            cursor: droguerias?.activa ? 'not-allowed' : 'pointer',
+                            background: promoMadresPlatinum ? '#E84F97' : 'white',
+                            border: `2px solid ${promoMadresPlatinum ? '#E84F97' : '#F8B8D4'}`,
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={!!promoMadresPlatinum}
+                              disabled={droguerias?.activa}
+                              onChange={e => {
+                                onPromoMadresPlatinumChange(e.target.checked)
+                                if (e.target.checked && onDrogueriasChange && droguerias?.activa) {
+                                  onDrogueriasChange({ ...droguerias, activa: false })
+                                }
+                              }}
+                              style={{ width: 18, height: 18, accentColor: '#E84F97' }}
+                            />
+                            <span style={{
+                              fontSize: 12, fontWeight: 700,
+                              color: promoMadresPlatinum ? 'white' : '#BE2E71',
+                            }}>
+                              Platinum al precio de Gold (15% off · ahorro &gt; $3,000)
+                            </span>
+                          </label>
+                          {droguerias?.activa && (
+                            <p style={{ fontSize: 10.5, color: '#888', marginTop: 6, fontStyle: 'italic' }}>
+                              Desactiva Droguerías para usar esta promo (son mutuamente exclusivas).
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Promoción Droguerías ── */}
+                  {onDrogueriasChange && droguerias && (
+                    <div style={{
+                      border: `2px solid ${droguerias.activa ? '#0F9D58' : '#A7E5C4'}`,
+                      borderRadius: 10, overflow: 'hidden',
+                      background: 'linear-gradient(135deg, #E8F8F0 0%, #F3FBF6 100%)',
+                      opacity: promoMadresPlatinum ? 0.45 : 1,
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => setDrogOpen(o => !o)}
+                        style={{
+                          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer',
+                          fontSize: 12.5, fontWeight: 800, color: '#066647',
+                        }}
+                      >
+                        <span>💊 PROMOCION DROGUERIAS ⚕️</span>
+                        <span>{drogOpen ? '▴' : '▾'}</span>
+                      </button>
+                      {drogOpen && (
+                        <div style={{ padding: '0 12px 12px' }}>
+                          <p style={{ fontSize: 11, color: '#0a6b40', marginBottom: 10, lineHeight: 1.4 }}>
+                            🩺 Descuento manual para campañas con droguerías. Se aplica a <b>todo el financiamiento</b>.
+                          </p>
+                          <label style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 12px', borderRadius: 8, marginBottom: 10,
+                            cursor: promoMadresPlatinum ? 'not-allowed' : 'pointer',
+                            background: droguerias.activa ? '#0F9D58' : 'white',
+                            border: `2px solid ${droguerias.activa ? '#0F9D58' : '#A7E5C4'}`,
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={droguerias.activa}
+                              disabled={promoMadresPlatinum}
+                              onChange={e => {
+                                onDrogueriasChange({ ...droguerias, activa: e.target.checked })
+                                if (e.target.checked && onPromoMadresPlatinumChange && promoMadresPlatinum) {
+                                  onPromoMadresPlatinumChange(false)
+                                }
+                              }}
+                              style={{ width: 18, height: 18, accentColor: '#0F9D58' }}
+                            />
+                            <span style={{
+                              fontSize: 12, fontWeight: 700,
+                              color: droguerias.activa ? 'white' : '#066647',
+                            }}>
+                              Aplicar descuento de droguería
+                            </span>
+                          </label>
+                          {droguerias.activa && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+                              <div>
+                                <label style={{ display: 'block', fontSize: 11, color: '#066647', marginBottom: 4, fontWeight: 700 }}>
+                                  🏥 Nombre de la droguería *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={droguerias.nombre}
+                                  onChange={e => onDrogueriasChange({ ...droguerias, nombre: e.target.value })}
+                                  placeholder="Ej: Walgreens, CVS, Caridad..."
+                                  maxLength={40}
+                                  style={{
+                                    width: '100%', border: '1.5px solid #A7E5C4', borderRadius: 8,
+                                    padding: '8px 10px', fontSize: 12, outline: 'none', boxSizing: 'border-box',
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', fontSize: 11, color: '#066647', marginBottom: 4, fontWeight: 700 }}>
+                                  ⚕️ Descuento %
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1} max={100} step={1}
+                                  value={droguerias.porcentaje || ''}
+                                  onChange={e => onDrogueriasChange({
+                                    ...droguerias,
+                                    porcentaje: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
+                                  })}
+                                  placeholder="15"
+                                  style={{
+                                    width: '100%', border: '1.5px solid #A7E5C4', borderRadius: 8,
+                                    padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box',
+                                    fontWeight: 700, color: '#066647', textAlign: 'center',
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {droguerias.activa && droguerias.porcentaje > 50 && (
+                            <p style={{
+                              fontSize: 10.5, color: '#b45309', marginTop: 8,
+                              background: '#fef3c7', padding: '6px 10px', borderRadius: 6,
+                            }}>
+                              ⚠️ Descuento superior a 50%. Confirma con gerencia antes de generar.
+                            </p>
+                          )}
+                          {promoMadresPlatinum && (
+                            <p style={{ fontSize: 10.5, color: '#888', marginTop: 6, fontStyle: 'italic' }}>
+                              Desactiva Mes de las Madres para usar esta promo.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
 

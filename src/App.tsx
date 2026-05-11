@@ -24,8 +24,7 @@ import {
   Ruler,
   X,
   Sun,
-  Moon,
-  Undo2
+  Moon
 } from 'lucide-react';
 import { PLANS, CONSTANTS, QuoteData, Plan } from './types';
 import { PDFModal, type ClienteData, type ConsultorData } from './components/PDFModal';
@@ -67,36 +66,17 @@ function MapUpdater({ center }: { center: [number, number] }) {
 }
 
 // Component to handle map clicks for manual measurement
-// - click: agrega punto (si está en modo manual)
-// - dblclick: confirma el polígono (en modo manual deshabilita el zoom default)
-function MapEventsHandler({
-  onMapClick,
-  onMapDblClick,
-  isManualMode,
-}: {
-  onMapClick: (latlng: L.LatLng) => void,
-  onMapDblClick: () => void,
-  isManualMode: boolean,
+function MapEventsHandler({ 
+  onMapClick, 
+  isManualMode 
+}: { 
+  onMapClick: (latlng: L.LatLng) => void, 
+  isManualMode: boolean 
 }) {
-  const map = useMap();
-  // Deshabilita el zoom-in por doble click solo mientras se está midiendo manual,
-  // para que el dblclick cierre el polígono en lugar de hacer zoom.
-  useEffect(() => {
-    if (isManualMode) {
-      map.doubleClickZoom.disable();
-    } else {
-      map.doubleClickZoom.enable();
-    }
-  }, [isManualMode, map]);
   useMapEvents({
     click(e) {
       if (isManualMode) {
         onMapClick(e.latlng);
-      }
-    },
-    dblclick() {
-      if (isManualMode) {
-        onMapDblClick();
       }
     },
   });
@@ -397,13 +377,6 @@ export default function App() {
   const [manualPoints, setManualPoints] = useState<L.LatLng[]>([]);
   const [manualArea, setManualArea] = useState<number>(0);
   const [mapLayer, setMapLayer] = useState<'satellite' | 'streets'>('satellite');
-
-  // Auto-Medir: candidatos detectados por Overpass (top 3 más cercanos)
-  type AutoBuilding = { id: string; points: L.LatLng[]; sqft: number; distance: number };
-  const [autoBuildings, setAutoBuildings] = useState<AutoBuilding[]>([]);
-  const [autoSelectedIdx, setAutoSelectedIdx] = useState<number | null>(null);
-  const autoAbortRef = useRef<AbortController | null>(null);
-
   const [isExporting, setIsExporting] = useState(false);
   const [pdfModalAbierto, setPdfModalAbierto] = useState(false);
   const [planesParaPDF, setPlanesParaPDF] = useState<string[]>(['Silver', 'Gold', 'Platinum']);
@@ -411,23 +384,14 @@ export default function App() {
   const [idiomaParaPDF, setIdiomaParaPDF] = useState<'es' | 'en'>('es');
   // Promo Mes de las Madres 2026: Platinum al precio de Gold (15% off)
   const [promoMadresPlatinum, setPromoMadresPlatinum] = useState<boolean>(false);
+  // Promoción Droguerías (descuento manual aplicado a todo el financiamiento)
+  const [droguerias, setDroguerias] = useState<{ activa: boolean; nombre: string; porcentaje: number }>({
+    activa: false, nombre: '', porcentaje: 0,
+  });
 
   // Safe lat/lng: fallback to PR center when field is empty or invalid (avoids Leaflet NaN crash)
   const mapLat = isNaN(parseFloat(coords.lat)) ? 18.2208 : parseFloat(coords.lat);
   const mapLng = isNaN(parseFloat(coords.lng)) ? -66.5901 : parseFloat(coords.lng);
-
-  // Si cambia la coordenada, descartamos el resultado previo de Auto-Medir
-  // (sería del edificio anterior y confunde al usuario)
-  useEffect(() => {
-    if (autoBuildings.length > 0) clearAutoBuildings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coords.lat, coords.lng]);
-
-  // Si el usuario entra a modo Manual, limpiamos lo de Auto-Medir
-  useEffect(() => {
-    if (isManualMode && autoBuildings.length > 0) clearAutoBuildings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isManualMode]);
 
   // Ref for dropdown outside-click detection
   const discountRef = useRef<HTMLDivElement>(null);
@@ -476,42 +440,12 @@ export default function App() {
     setManualArea(0);
   };
 
-  // Deshace el último punto trazado en modo manual
-  const undoLastManualPoint = () => {
-    setManualPoints(prev => {
-      const next = prev.slice(0, -1);
-      setManualArea(next.length >= 3 ? calculatePolygonArea(next) : 0);
-      return next;
-    });
-  };
-
-  // Arrastrar un vértice del polígono manual: actualiza punto y recalcula área
-  const updateManualPoint = (idx: number, latlng: L.LatLng) => {
-    setManualPoints(prev => {
-      const next = prev.map((p, i) => i === idx ? latlng : p);
-      setManualArea(next.length >= 3 ? calculatePolygonArea(next) : 0);
-      return next;
-    });
-  };
-
   const confirmManualMeasurement = () => {
     if (manualArea > 0) {
       setData(prev => ({ ...prev, sqft: manualArea }));
       setIsManualMode(false);
       clearManualMeasurement();
     }
-  };
-
-  // Pasa el polígono detectado por Auto-Medir al modo Manual para que el asesor
-  // pueda ajustar vértices, mover puntos o agregar/quitar antes de confirmar.
-  const refineAutoAsManual = () => {
-    if (autoSelectedIdx === null) return;
-    const b = autoBuildings[autoSelectedIdx];
-    if (!b) return;
-    setManualPoints(b.points);
-    setManualArea(b.sqft);
-    clearAutoBuildings();
-    setIsManualMode(true);
   };
 
   const exportMap = async () => {
@@ -538,59 +472,6 @@ export default function App() {
     }
   };
 
-  // ── Helpers de geometría (Auto-Medir) ────────────────────────────
-  // Calcula el área de un polígono geo (lat/lon) en pies cuadrados
-  const computePolygonSqft = (nodes: Array<{ lat: number; lon: number }>) => {
-    if (nodes.length < 3) return 0;
-    const refLat = nodes[0].lat;
-    const refLon = nodes[0].lon;
-    const cosLat = Math.cos(refLat * Math.PI / 180);
-    const R = 6378137;
-    const pts = nodes.map(n => ({
-      x: (n.lon - refLon) * (Math.PI / 180) * R * cosLat,
-      y: (n.lat - refLat) * (Math.PI / 180) * R,
-    }));
-    let area = 0;
-    for (let i = 0; i < pts.length; i++) {
-      const j = (i + 1) % pts.length;
-      area += pts[i].x * pts[j].y;
-      area -= pts[j].x * pts[i].y;
-    }
-    return Math.round(Math.abs(area) / 2 * 10.7639);
-  };
-
-  // Centroide simple promediando lat/lon
-  const polygonCentroid = (nodes: Array<{ lat: number; lon: number }>) => {
-    const lat = nodes.reduce((s, p) => s + p.lat, 0) / nodes.length;
-    const lon = nodes.reduce((s, p) => s + p.lon, 0) / nodes.length;
-    return { lat, lon };
-  };
-
-  // Distancia haversine en metros entre dos puntos lat/lon
-  const haversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6378137;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(a));
-  };
-
-  // Selecciona un candidato de Auto-Medir: aplica su sqft y lo marca como activo
-  const selectAutoBuilding = (idx: number) => {
-    const b = autoBuildings[idx];
-    if (!b) return;
-    setAutoSelectedIdx(idx);
-    setData(prev => ({ ...prev, sqft: b.sqft }));
-  };
-
-  // Limpia el resultado de Auto-Medir (al entrar a Manual o al cambiar coords)
-  const clearAutoBuildings = () => {
-    setAutoBuildings([]);
-    setAutoSelectedIdx(null);
-  };
-
   const fetchFreeRoofArea = async () => {
     const lat = parseFloat(coords.lat);
     const lng = parseFloat(coords.lng);
@@ -606,68 +487,55 @@ export default function App() {
       return;
     }
 
-    // Cancelar request anterior si está en curso
-    if (autoAbortRef.current) autoAbortRef.current.abort();
-    const controller = new AbortController();
-    autoAbortRef.current = controller;
-
     setIsFetchingArea(true);
     setAreaError(null);
-    clearAutoBuildings();
-
-    // Radio progresivo: empieza estrecho y va abriendo si no encuentra
-    const radii = [50, 100, 200, 500];
-    let rawBuildings: any[] = [];
-    let usedRadius = 0;
 
     try {
-      for (const radius of radii) {
-        const query = `[out:json][timeout:15];way(around:${radius},${lat},${lng})["building"];out geom;`;
-        const response = await fetch(
-          `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`,
-          { signal: controller.signal }
-        );
-        if (!response.ok) continue;
-        const dataJson = await response.json();
-        if (dataJson.elements && dataJson.elements.length > 0) {
-          rawBuildings = dataJson.elements;
-          usedRadius = radius;
-          break;
+      const query = `[out:json];way(around:100,${lat},${lng})["building"];out geom;`;
+      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+
+      if (!response.ok) throw new Error('Error al conectar con OpenStreetMap. Intenta de nuevo.');
+
+      const dataJson = await response.json();
+      const buildings = dataJson.elements;
+
+      if (!buildings || buildings.length === 0) {
+        throw new Error('No se encontró ningún edificio en OpenStreetMap para estas coordenadas. Usa el modo Manual.');
+      }
+
+      const building = buildings[0];
+      const nodes = building.geometry;
+
+      if (nodes && nodes.length > 2) {
+        // Coordenadas relativas al primer nodo para evitar pérdida de precisión numérica
+        const refLat = nodes[0].lat;
+        const refLon = nodes[0].lon;
+        const cosLat = Math.cos(refLat * Math.PI / 180);
+        const R = 6378137;
+
+        const points = nodes.map((n: any) => ({
+          x: (n.lon - refLon) * (Math.PI / 180) * R * cosLat,
+          y: (n.lat - refLat) * (Math.PI / 180) * R,
+        }));
+
+        let area = 0;
+        for (let i = 0; i < points.length; i++) {
+          const j = (i + 1) % points.length;
+          area += points[i].x * points[j].y;
+          area -= points[j].x * points[i].y;
         }
-      }
+        const areaM2  = Math.abs(area) / 2;
+        const areaSqFt = Math.round(areaM2 * 10.7639);
 
-      if (rawBuildings.length === 0) {
-        throw new Error('No se encontró ningún edificio en OpenStreetMap dentro de 500m. OSM tiene huecos en zonas residenciales de PR — usa el modo Manual para trazar el techo a mano.');
-      }
+        if (areaSqFt < 100) {
+          throw new Error(`Área detectada (${areaSqFt} ft²) demasiado pequeña. Verifica las coordenadas o usa el modo Manual.`);
+        }
 
-      // Procesar: área + centroide + distancia → ordenar por cercanía → top 3
-      const processed: AutoBuilding[] = rawBuildings
-        .filter((b: any) => Array.isArray(b.geometry) && b.geometry.length > 2)
-        .map((b: any) => {
-          const nodes = b.geometry as Array<{ lat: number; lon: number }>;
-          const sqft = computePolygonSqft(nodes);
-          const c = polygonCentroid(nodes);
-          const distance = haversineMeters(lat, lng, c.lat, c.lon);
-          const points = nodes.map(n => L.latLng(n.lat, n.lon));
-          return { id: String(b.id), points, sqft, distance };
-        })
-        .filter(b => b.sqft >= 100)
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 3);
-
-      if (processed.length === 0) {
-        throw new Error('Encontramos edificios pero todos son demasiado pequeños (<100 ft²). Probablemente no son casas. Usa el modo Manual.');
-      }
-
-      setAutoBuildings(processed);
-      setAutoSelectedIdx(0);
-      setData(prev => ({ ...prev, sqft: processed[0].sqft }));
-      // Si tuvimos que abrir el radio, lo informamos en lugar de error
-      if (usedRadius >= 200) {
-        setAreaError(`Solo encontramos edificios a ${usedRadius}m del punto. Verifica que sea el correcto en el mapa.`);
+        setData(prev => ({ ...prev, sqft: areaSqFt }));
+      } else {
+        throw new Error('No se pudo obtener la geometría del edificio. Usa el modo Manual.');
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') return;
       setAreaError(error.message || 'Error al obtener datos. Intenta de nuevo o usa el modo Manual.');
     } finally {
       setIsFetchingArea(false);
@@ -813,6 +681,10 @@ export default function App() {
     [promoMadresPlatinum, data, platinumPlan, goldPlan]
   );
 
+  // Factor de descuento para promoción droguerías (multiplicador 1-X%)
+  const drogActiva  = droguerias.activa && droguerias.porcentaje > 0 && droguerias.nombre.trim() !== '';
+  const drogFactor  = drogActiva ? (1 - droguerias.porcentaje / 100) : 1;
+
   const roofingResumen = {
     sqft: data.sqft,
     removalPct: data.removalPercentage,
@@ -821,18 +693,24 @@ export default function App() {
       data.firmaYGana ? 'Firma y Gana (-$500)' : null,
       data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
       promoMadresPlatinum ? 'Promo Mes de las Madres: Platinum al precio de Gold' : null,
+      drogActiva ? `Promo Droguería ${droguerias.nombre} (-${droguerias.porcentaje}%)` : null,
     ].filter(Boolean).join(', ') || 'Ninguno',
     modalidades: modalidadesParaPDF,
     idioma:      idiomaParaPDF,
     promoMadres: promoMadresPlatinum,
+    // Promo Droguerías a nivel resumen
+    drogueria: drogActiva ? {
+      nombre:     droguerias.nombre.trim(),
+      porcentaje: droguerias.porcentaje,
+    } : undefined,
     planes: calculations
       .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
       .map(p => {
         const isPlatinumPromo = promoMadresPlatinum && p.id === 'platinum' && platinumPromo;
         // Si Platinum está en promo, usamos los valores promo como "actuales" y guardamos los originales
         const display = isPlatinumPromo ? platinumPromo! : p;
-        return {
-          nombre:        p.name,
+        // Si droguería activa, aplicamos el factor a TODOS los valores y guardamos originales
+        const baseValues = {
           mensual5:      display.monthly60,
           mensual7:      display.monthly84,
           mensual10:     display.monthly120,
@@ -841,17 +719,32 @@ export default function App() {
           cashIvu:       display.cashIvu,
           valorConIvu:   display.cashBalance,
           valorAntesIvu: display.baseBalance,
-          financiado:    display.cashBalance,
+        };
+        const finalValues = drogActiva ? {
+          mensual5:      baseValues.mensual5      * drogFactor,
+          mensual7:      baseValues.mensual7      * drogFactor,
+          mensual10:     baseValues.mensual10     * drogFactor,
+          cashTotal:     baseValues.cashTotal     * drogFactor,
+          cashSinIvu:    baseValues.cashSinIvu    * drogFactor,
+          cashIvu:       baseValues.cashIvu       * drogFactor,
+          valorConIvu:   baseValues.valorConIvu   * drogFactor,
+          valorAntesIvu: baseValues.valorAntesIvu * drogFactor,
+        } : baseValues;
+        return {
+          nombre:        p.name,
+          ...finalValues,
+          financiado:    finalValues.valorConIvu,
           promoMadres:   isPlatinumPromo ? true : undefined,
-          original: isPlatinumPromo ? {
-            mensual5:      p.monthly60,
-            mensual7:      p.monthly84,
-            mensual10:     p.monthly120,
-            cashTotal:     p.cashTotalConIvu,
-            cashSinIvu:    p.cashValorSinIvu,
-            cashIvu:       p.cashIvu,
-            valorConIvu:   p.cashBalance,
-            valorAntesIvu: p.baseBalance,
+          drogueria:     drogActiva ? true : undefined,
+          original: (isPlatinumPromo || drogActiva) ? {
+            mensual5:      isPlatinumPromo ? p.monthly60      : baseValues.mensual5,
+            mensual7:      isPlatinumPromo ? p.monthly84      : baseValues.mensual7,
+            mensual10:     isPlatinumPromo ? p.monthly120     : baseValues.mensual10,
+            cashTotal:     isPlatinumPromo ? p.cashTotalConIvu: baseValues.cashTotal,
+            cashSinIvu:    isPlatinumPromo ? p.cashValorSinIvu: baseValues.cashSinIvu,
+            cashIvu:       isPlatinumPromo ? p.cashIvu        : baseValues.cashIvu,
+            valorConIvu:   isPlatinumPromo ? p.cashBalance    : baseValues.valorConIvu,
+            valorAntesIvu: isPlatinumPromo ? p.baseBalance    : baseValues.valorAntesIvu,
           } : undefined,
         };
       }),
@@ -1265,93 +1158,27 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Auto y Manual con el mismo peso visual: ambos son válidos. */}
-                {/* Auto = rápido pero depende de OSM. Manual = preciso siempre. */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={fetchFreeRoofArea}
                     disabled={isFetchingArea || isManualMode}
-                    className="py-3 px-3 bg-windmar-blue-dark hover:bg-windmar-blue text-white rounded-2xl transition-all flex flex-col items-center justify-center gap-0.5 disabled:opacity-50 shadow-md shadow-windmar-blue-dark/20"
+                    className="py-3 bg-windmar-blue-dark hover:bg-windmar-blue text-white text-xs font-black rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-windmar-blue-dark/20"
                   >
-                    <div className="flex items-center gap-2">
-                      {isFetchingArea ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} />}
-                      <span className="text-xs font-black uppercase tracking-wider">Auto-Medir</span>
-                    </div>
-                    <span className="text-[9px] font-bold text-white/70 normal-case tracking-normal">
-                      Medición rápida (OSM)
-                    </span>
+                    {isFetchingArea ? <RefreshCw className="animate-spin" size={16} /> : <Zap size={16} />}
+                    Auto-Medir
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsManualMode(!isManualMode)}
-                    className={`py-3 px-3 rounded-2xl transition-all flex flex-col items-center justify-center gap-0.5 shadow-md ${
-                      isManualMode
-                        ? 'bg-windmar-gold text-windmar-blue-dark shadow-windmar-gold/30'
-                        : 'bg-windmar-blue-dark text-white hover:bg-windmar-blue shadow-windmar-blue-dark/20'
+                    className={`py-3 text-xs font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md ${
+                      isManualMode ? 'bg-windmar-gold text-windmar-blue-dark' : 'bg-windmar-blue-dark text-white hover:bg-windmar-blue shadow-windmar-blue-dark/20'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Ruler size={16} />
-                      <span className="text-xs font-black uppercase tracking-wider">
-                        {isManualMode ? 'Terminar Manual' : 'Medir Manual'}
-                      </span>
-                    </div>
-                    <span className={`text-[9px] font-bold normal-case tracking-normal ${
-                      isManualMode ? 'text-windmar-blue-dark/70' : 'text-white/70'
-                    }`}>
-                      {isManualMode ? 'Click en el mapa' : 'Medición precisa (a mano)'}
-                    </span>
+                    <Maximize2 size={16} />
+                    {isManualMode ? 'Terminar' : 'Manual'}
                   </motion.button>
                 </div>
-
-                {/* Resultado Auto-Medir: muestra candidato seleccionado + alternativas si las hay */}
-                {autoBuildings.length > 0 && (
-                  <div className="flex flex-col gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl px-3 py-2.5 mb-3">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                          {autoBuildings.length === 1
-                            ? 'Edificio detectado y medido.'
-                            : `Detectamos ${autoBuildings.length} edificios cerca. Elige el correcto en el mapa o aquí abajo.`}
-                        </p>
-                        <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5 font-semibold">
-                          El polígono verde es el que estás midiendo. Si no es el correcto, prueba otra opción o usa <span className="font-black">Manual</span>.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {autoBuildings.map((b, i) => {
-                        const sel = i === autoSelectedIdx;
-                        return (
-                          <button
-                            key={b.id}
-                            onClick={() => selectAutoBuilding(i)}
-                            className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${
-                              sel
-                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                                : 'bg-white dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100'
-                            }`}
-                          >
-                            Opción {i + 1}
-                            <span className="block text-[9px] font-bold opacity-90 normal-case tracking-normal">
-                              {b.sqft.toLocaleString()} ft² · {Math.round(b.distance)}m
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {/* Refinar: pasa el polígono al modo Manual para corregir vértices */}
-                    <button
-                      onClick={refineAutoAsManual}
-                      className="w-full py-1.5 mt-1 bg-windmar-blue-dark hover:bg-windmar-blue text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Ruler size={12} />
-                      Ajustar este polígono manualmente
-                    </button>
-                  </div>
-                )}
 
                 {/* Error Auto-Medir */}
                 {areaError && (
@@ -1411,7 +1238,6 @@ export default function App() {
                     maxZoom={23}
                     style={{ height: '100%', width: '100%' }}
                     zoomControl={false}
-                    doubleClickZoom={!isManualMode}
                   >
                     <TileLayer
                       attribution={mapLayer === 'satellite' ? '&copy; Esri' : '&copy; OpenStreetMap'}
@@ -1422,40 +1248,22 @@ export default function App() {
                       maxZoom={23}
                       maxNativeZoom={19}
                     />
-                    <MapEventsHandler
-                      onMapClick={handleMapClick}
-                      onMapDblClick={confirmManualMeasurement}
-                      isManualMode={isManualMode}
-                    />
+                    <MapEventsHandler onMapClick={handleMapClick} isManualMode={isManualMode} />
                     {!isManualMode && (mapLat !== 18.2208 || mapLng !== -66.5901) && (
                       <Marker position={[mapLat, mapLng]} />
                     )}
                     {manualPoints.length > 0 && (
                       <>
-                        {manualPoints.map((p, i) => {
-                          const isFirst = i === 0;
-                          const canClose = manualPoints.length >= 3;
-                          // El primer punto se hace más grande y resalta cuando se puede cerrar el polígono
-                          const highlightFirst = isFirst && canClose;
-                          return (
-                            <Marker
-                              key={i}
-                              position={p}
-                              draggable={true}
-                              eventHandlers={{
-                                dragend: (e) => updateManualPoint(i, (e.target as L.Marker).getLatLng()),
-                                click: () => { if (highlightFirst) confirmManualMeasurement(); },
-                              }}
-                              icon={L.divIcon({
-                                className: highlightFirst
-                                  ? 'flex items-center justify-center bg-emerald-500 rounded-full border-2 border-white shadow-xl ring-4 ring-emerald-300/50 animate-pulse text-white text-[10px] font-black'
-                                  : 'bg-windmar-gold rounded-full border border-white shadow-lg',
-                                iconSize: highlightFirst ? [22, 22] : [12, 12],
-                                html: highlightFirst ? '✓' : '',
-                              })}
-                            />
-                          );
-                        })}
+                        {manualPoints.map((p, i) => (
+                          <Marker
+                            key={i}
+                            position={p}
+                            icon={L.divIcon({
+                              className: 'bg-windmar-gold w-3 h-3 rounded-full border border-white shadow-lg',
+                              iconSize: [12, 12]
+                            })}
+                          />
+                        ))}
                         {manualPoints.length >= 3 ? (
                           <Polygon positions={manualPoints} pathOptions={{ color: '#f29e1f', fillColor: '#f29e1f', fillOpacity: 0.3, weight: 3 }} />
                         ) : (
@@ -1463,81 +1271,43 @@ export default function App() {
                         )}
                       </>
                     )}
-                    {/* Polígonos detectados por Auto-Medir: verde = seleccionado, gris = alternativas clickables */}
-                    {autoBuildings.map((b, idx) => {
-                      const selected = idx === autoSelectedIdx;
-                      return (
-                        <Polygon
-                          key={b.id}
-                          positions={b.points}
-                          pathOptions={{
-                            color:       selected ? '#10b981' : '#94a3b8',
-                            fillColor:   selected ? '#10b981' : '#94a3b8',
-                            fillOpacity: selected ? 0.4 : 0.15,
-                            weight:      selected ? 3 : 2,
-                            dashArray:   selected ? undefined : '6 4',
-                          }}
-                          eventHandlers={{ click: () => selectAutoBuilding(idx) }}
-                        />
-                      );
-                    })}
                     <MapUpdater center={[mapLat, mapLng]} />
                   </MapContainer>
 
                   <AnimatePresence>
                     {isManualMode && (
-                      <motion.div
+                      <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         className="absolute bottom-4 left-4 right-4 z-[1001]"
                       >
-                        <div className="p-3 rounded-xl border border-white/20 shadow-xl" style={{ backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)' }}>
-                          <div className="flex justify-between items-center gap-3">
-                            <div className="min-w-0">
-                              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">
-                                {manualPoints.length === 0 ? 'Modo Manual' : `${manualPoints.length} ${manualPoints.length === 1 ? 'punto' : 'puntos'}`}
-                              </p>
-                              <p className="text-lg font-black truncate" style={{ color: '#f29e1f' }}>
-                                {manualPoints.length < 3 ? `Trace ${3 - manualPoints.length} ${manualPoints.length === 2 ? 'punto más' : 'puntos más'}...` : `${manualArea.toLocaleString()} ft²`}
-                              </p>
-                            </div>
-                            <div className="flex gap-2 shrink-0">
-                              <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                onClick={undoLastManualPoint}
-                                disabled={manualPoints.length === 0}
-                                className="p-2 bg-white/10 rounded-lg text-white disabled:opacity-30"
-                                title="Deshacer último punto"
-                              >
-                                <Undo2 size={16} />
-                              </motion.button>
-                              <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                onClick={clearManualMeasurement}
-                                disabled={manualPoints.length === 0}
-                                className="p-2 bg-white/10 rounded-lg text-white disabled:opacity-30"
-                                title="Reiniciar"
-                              >
-                                <RefreshCw size={16} />
-                              </motion.button>
-                              <motion.button
-                                whileTap={{ scale: 0.95 }}
-                                onClick={confirmManualMeasurement}
-                                disabled={manualPoints.length < 3}
-                                className="px-4 py-1.5 text-windmar-dark font-black text-xs rounded-lg disabled:opacity-50"
-                                style={{ backgroundColor: '#f29e1f' }}
-                              >
-                                APLICAR
-                              </motion.button>
-                            </div>
+                        <div className="p-3 rounded-xl border border-white/20 flex justify-between items-center shadow-xl" style={{ backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)' }}>
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Área Trazada</p>
+                            <p className="text-lg font-black" style={{ color: '#f29e1f' }}>
+                              {manualPoints.length < 3 ? 'Trace 3 puntos...' : `${manualArea} ft²`}
+                            </p>
                           </div>
-                          {/* Tip contextual: muestra cómo cerrar el polígono y cómo editarlo */}
-                          <p className="mt-2 text-[9px] text-slate-400/80 leading-snug">
-                            {manualPoints.length >= 3
-                              ? '✓ Doble-click en el mapa, click en el punto verde, o APLICAR. Arrastra puntos para corregir.'
-                              : '💡 Haz click en el mapa para marcar las esquinas del techo. Puedes arrastrar puntos después.'}
-                          </p>
+                          <div className="flex gap-2">
+                            <motion.button 
+                              whileTap={{ scale: 0.9 }}
+                              onClick={clearManualMeasurement} 
+                              className="p-2 bg-white/10 rounded-lg text-white" 
+                              title="Reiniciar"
+                            >
+                              <RefreshCw size={16} />
+                            </motion.button>
+                            <motion.button 
+                              whileTap={{ scale: 0.95 }}
+                              onClick={confirmManualMeasurement} 
+                              disabled={manualPoints.length < 3}
+                              className="px-4 py-1.5 text-windmar-dark font-black text-xs rounded-lg disabled:opacity-50"
+                              style={{ backgroundColor: '#f29e1f' }}
+                            >
+                              APLICAR
+                            </motion.button>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -1682,6 +1452,8 @@ export default function App() {
         onIdiomaChange={setIdiomaParaPDF}
         promoMadresPlatinum={promoMadresPlatinum}
         onPromoMadresPlatinumChange={setPromoMadresPlatinum}
+        droguerias={droguerias}
+        onDrogueriasChange={setDroguerias}
       />
     </>
   );
