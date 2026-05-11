@@ -384,8 +384,8 @@ export default function App() {
   const [idiomaParaPDF, setIdiomaParaPDF] = useState<'es' | 'en'>('es');
   // Promo Mes de las Madres 2026: Platinum al precio de Gold (15% off)
   const [promoMadresPlatinum, setPromoMadresPlatinum] = useState<boolean>(false);
-  // Promoción Droguerías (descuento manual aplicado a todo el financiamiento)
-  const [droguerias, setDroguerias] = useState<{ activa: boolean; nombre: string; porcentaje: number }>({
+  // Promoción Farmacias (descuento manual aplicado a todo el financiamiento)
+  const [farmacias, setFarmacias] = useState<{ activa: boolean; nombre: string; porcentaje: number }>({
     activa: false, nombre: '', porcentaje: 0,
   });
 
@@ -681,9 +681,9 @@ export default function App() {
     [promoMadresPlatinum, data, platinumPlan, goldPlan]
   );
 
-  // Factor de descuento para promoción droguerías (multiplicador 1-X%)
-  const drogActiva  = droguerias.activa && droguerias.porcentaje > 0 && droguerias.nombre.trim() !== '';
-  const drogFactor  = drogActiva ? (1 - droguerias.porcentaje / 100) : 1;
+  // Factor de descuento para promoción farmacias (multiplicador 1-X%)
+  const farmaActiva  = farmacias.activa && farmacias.porcentaje > 0 && farmacias.nombre.trim() !== '';
+  const farmaFactor  = farmaActiva ? (1 - farmacias.porcentaje / 100) : 1;
 
   const roofingResumen = {
     sqft: data.sqft,
@@ -693,15 +693,15 @@ export default function App() {
       data.firmaYGana ? 'Firma y Gana (-$500)' : null,
       data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
       promoMadresPlatinum ? 'Promo Mes de las Madres: Platinum al precio de Gold' : null,
-      drogActiva ? `Promo Droguería ${droguerias.nombre} (-${droguerias.porcentaje}%)` : null,
+      farmaActiva ? `Promo Farmacia ${farmacias.nombre} (-${farmacias.porcentaje}%)` : null,
     ].filter(Boolean).join(', ') || 'Ninguno',
     modalidades: modalidadesParaPDF,
     idioma:      idiomaParaPDF,
     promoMadres: promoMadresPlatinum,
-    // Promo Droguerías a nivel resumen
-    drogueria: drogActiva ? {
-      nombre:     droguerias.nombre.trim(),
-      porcentaje: droguerias.porcentaje,
+    // Promo Farmacias a nivel resumen
+    farmacia: farmaActiva ? {
+      nombre:     farmacias.nombre.trim(),
+      porcentaje: farmacias.porcentaje,
     } : undefined,
     planes: calculations
       .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
@@ -709,7 +709,7 @@ export default function App() {
         const isPlatinumPromo = promoMadresPlatinum && p.id === 'platinum' && platinumPromo;
         // Si Platinum está en promo, usamos los valores promo como "actuales" y guardamos los originales
         const display = isPlatinumPromo ? platinumPromo! : p;
-        // Si droguería activa, aplicamos el factor a TODOS los valores y guardamos originales
+        // Si farmacia activa, aplicamos el factor a TODOS los valores y guardamos originales
         const baseValues = {
           mensual5:      display.monthly60,
           mensual7:      display.monthly84,
@@ -720,23 +720,23 @@ export default function App() {
           valorConIvu:   display.cashBalance,
           valorAntesIvu: display.baseBalance,
         };
-        const finalValues = drogActiva ? {
-          mensual5:      baseValues.mensual5      * drogFactor,
-          mensual7:      baseValues.mensual7      * drogFactor,
-          mensual10:     baseValues.mensual10     * drogFactor,
-          cashTotal:     baseValues.cashTotal     * drogFactor,
-          cashSinIvu:    baseValues.cashSinIvu    * drogFactor,
-          cashIvu:       baseValues.cashIvu       * drogFactor,
-          valorConIvu:   baseValues.valorConIvu   * drogFactor,
-          valorAntesIvu: baseValues.valorAntesIvu * drogFactor,
+        const finalValues = farmaActiva ? {
+          mensual5:      baseValues.mensual5      * farmaFactor,
+          mensual7:      baseValues.mensual7      * farmaFactor,
+          mensual10:     baseValues.mensual10     * farmaFactor,
+          cashTotal:     baseValues.cashTotal     * farmaFactor,
+          cashSinIvu:    baseValues.cashSinIvu    * farmaFactor,
+          cashIvu:       baseValues.cashIvu       * farmaFactor,
+          valorConIvu:   baseValues.valorConIvu   * farmaFactor,
+          valorAntesIvu: baseValues.valorAntesIvu * farmaFactor,
         } : baseValues;
         return {
           nombre:        p.name,
           ...finalValues,
           financiado:    finalValues.valorConIvu,
           promoMadres:   isPlatinumPromo ? true : undefined,
-          drogueria:     drogActiva ? true : undefined,
-          original: (isPlatinumPromo || drogActiva) ? {
+          farmacia:     farmaActiva ? true : undefined,
+          original: (isPlatinumPromo || farmaActiva) ? {
             mensual5:      isPlatinumPromo ? p.monthly60      : baseValues.mensual5,
             mensual7:      isPlatinumPromo ? p.monthly84      : baseValues.mensual7,
             mensual10:     isPlatinumPromo ? p.monthly120     : baseValues.mensual10,
@@ -1452,8 +1452,8 @@ export default function App() {
         onIdiomaChange={setIdiomaParaPDF}
         promoMadresPlatinum={promoMadresPlatinum}
         onPromoMadresPlatinumChange={setPromoMadresPlatinum}
-        droguerias={droguerias}
-        onDrogueriasChange={setDroguerias}
+        farmacias={farmacias}
+        onFarmaciasChange={setFarmacias}
       />
     </>
   );

@@ -23,7 +23,7 @@ const HD_GRAY      = rgb(0.42, 0.44, 0.50)
 const PINK_PROMO   = rgb(0.910, 0.310, 0.592)   // #E84F97  rosa magenta
 const PINK_DARK    = rgb(0.745, 0.180, 0.443)   // #BE2E71  rosa oscuro
 const PINK_BG      = rgb(1.000, 0.918, 0.953)   // #FFEAF3  rosa muy claro
-// Promoción Droguerías (tema farmacia)
+// Promoción Farmacias (tema farmacia)
 const PHARM_GREEN  = rgb(0.059, 0.616, 0.345)   // #0F9D58  verde farmacia
 const PHARM_DARK   = rgb(0.024, 0.400, 0.251)   // #066647  verde oscuro
 const PHARM_BG     = rgb(0.910, 0.973, 0.941)   // #E8F8F0  verde muy claro
@@ -190,8 +190,8 @@ export interface RoofingResumen {
     financiado: number
     // Promo Mes de las Madres: si true, este plan se muestra con precio original tachado en rosa
     promoMadres?: boolean
-    // Promoción Droguerías: si true, plan con precio original tachado en verde farmacia
-    drogueria?: boolean
+    // Promoción Farmacias: si true, plan con precio original tachado en verde farmacia
+    farmacia?: boolean
     original?: {
       mensual5: number
       mensual7: number
@@ -205,8 +205,8 @@ export interface RoofingResumen {
   }[]
   idioma?: 'es' | 'en'
   promoMadres?: boolean   // bandera global: hay al menos un plan con promo
-  // Promoción Droguerías
-  drogueria?: {
+  // Promoción Farmacias
+  farmacia?: {
     nombre: string
     porcentaje: number   // entero 1-100
   }
@@ -468,8 +468,8 @@ function drawCotizacionRoofing(
     tableY -= bannerH + 6
   }
 
-  // ── Banner Promoción Droguerías ──────────────────────────────
-  if (resumen.drogueria) {
+  // ── Banner Promoción Farmacias ──────────────────────────────
+  if (resumen.farmacia) {
     const bannerH = 26
     rect(page, M, tableY - bannerH + 8, dataW, bannerH, PHARM_BG)
     page.drawRectangle({
@@ -479,14 +479,14 @@ function drawCotizacionRoofing(
     // Cruces farmacéuticas a los lados
     drawCross(page, M + 12, tableY + 1, 6, PHARM_GREEN)
     drawCross(page, M + dataW - 18, tableY + 1, 6, PHARM_GREEN)
-    const drogTitle = lang === 'en'
-      ? `PHARMACY PROMOTION - ${resumen.drogueria.nombre.toUpperCase()} - ${resumen.drogueria.porcentaje}% OFF`
-      : `PROMOCION DROGUERIAS - ${resumen.drogueria.nombre.toUpperCase()} - ${resumen.drogueria.porcentaje}% OFF`
-    text(page, drogTitle, 10, M + 26, tableY, bold, PHARM_DARK)
-    const drogSub = lang === 'en'
+    const farmaTitle = lang === 'en'
+      ? `PHARMACY PROMOTION - ${resumen.farmacia.nombre.toUpperCase()} - ${resumen.farmacia.porcentaje}% OFF`
+      : `PROMOCION FARMACIAS - ${resumen.farmacia.nombre.toUpperCase()} - ${resumen.farmacia.porcentaje}% OFF`
+    text(page, farmaTitle, 10, M + 26, tableY, bold, PHARM_DARK)
+    const farmaSub = lang === 'en'
       ? 'Discount applied to entire financing - Original price crossed out, new price in green'
       : 'Descuento aplicado a todo el financiamiento - Precio original tachado, nuevo en verde'
-    text(page, drogSub, 6.5, M + 26, tableY - 12, reg, PHARM_DARK)
+    text(page, farmaSub, 6.5, M + 26, tableY - 12, reg, PHARM_DARK)
     tableY -= bannerH + 6
   }
 
@@ -514,11 +514,11 @@ function drawCotizacionRoofing(
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         const promo = plan.promoMadres === true
-        const drog  = plan.drogueria === true
-        const tinted = promo || drog
-        const tColor = drog ? PHARM_GREEN : promo ? PINK_PROMO : pc
-        const tDark  = drog ? PHARM_DARK  : promo ? PINK_DARK  : DARK
-        const tBg    = drog ? PHARM_BG    : promo ? PINK_BG    : EMERALD_BG
+        const farma  = plan.farmacia === true
+        const tinted = promo || farma
+        const tColor = farma ? PHARM_GREEN : promo ? PINK_PROMO : pc
+        const tDark  = farma ? PHARM_DARK  : promo ? PINK_DARK  : DARK
+        const tBg    = farma ? PHARM_BG    : promo ? PINK_BG    : EMERALD_BG
         const rowH  = tinted ? rH + 10 : rH
         if (i % 2 === 0) rect(page, M, tableY - 2 - (tinted ? 10 : 0), dataW, rowH, tBg)
         rect(page, c0 - 2, tableY - 1, 52, 13, tColor)
@@ -530,7 +530,7 @@ function drawCotizacionRoofing(
           text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY - 8, bold, tDark)
           text(page, `$${fmt(plan.cashSinIvu)}`, 8, c2, tableY - 8, bold, tDark)
           text(page, `$${fmt(plan.cashIvu)}`,    8, c3, tableY - 8, bold, tDark)
-          if (drog) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
+          if (farma) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
           else      drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
         } else {
           text(page, `$${fmt(plan.cashTotal)}`,  8, c1, tableY + 3, bold, GREEN_CASH)
@@ -562,11 +562,11 @@ function drawCotizacionRoofing(
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         const promo = plan.promoMadres === true
-        const drog  = plan.drogueria === true
-        const tinted = promo || drog
-        const tColor = drog ? PHARM_GREEN : promo ? PINK_PROMO : pc
-        const tDark  = drog ? PHARM_DARK  : promo ? PINK_DARK  : DARK
-        const tBg    = drog ? PHARM_BG    : promo ? PINK_BG    : LIGHT
+        const farma  = plan.farmacia === true
+        const tinted = promo || farma
+        const tColor = farma ? PHARM_GREEN : promo ? PINK_PROMO : pc
+        const tDark  = farma ? PHARM_DARK  : promo ? PINK_DARK  : DARK
+        const tBg    = farma ? PHARM_BG    : promo ? PINK_BG    : LIGHT
         const rowH  = tinted ? rH + 10 : rH
         if (i % 2 === 0) rect(page, M, tableY - 2 - (tinted ? 10 : 0), dataW, rowH, tBg)
         rect(page, c0 - 2, tableY - 1, 52, 13, tColor)
@@ -582,7 +582,7 @@ function drawCotizacionRoofing(
           text(page, `$${fmt(plan.mensual10)}`,     7, c3, tableY - 8, bold, tDark)
           text(page, `$${fmt(plan.valorConIvu)}`,   7, c4, tableY - 8, bold, tDark)
           text(page, `$${fmt(plan.valorAntesIvu)}`, 7, c5, tableY - 8, bold, tDark)
-          if (drog) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
+          if (farma) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
           else      drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
         } else {
           text(page, `$${fmt(plan.mensual5)}`,      7, c1, tableY + 3, reg,  DARK)
@@ -610,11 +610,11 @@ function drawCotizacionRoofing(
       resumen.planes.forEach((plan, i) => {
         const pc = plan.nombre === 'SILVER' ? SILVER_COLOR : plan.nombre === 'GOLD' ? GOLD_COLOR : PLAT_COLOR
         const promo = plan.promoMadres === true
-        const drog  = plan.drogueria === true
-        const tinted = promo || drog
-        const tColor = drog ? PHARM_GREEN : promo ? PINK_PROMO : pc
-        const tDark  = drog ? PHARM_DARK  : promo ? PINK_DARK  : DARK
-        const tBg    = drog ? PHARM_BG    : promo ? PINK_BG    : LIGHT
+        const farma  = plan.farmacia === true
+        const tinted = promo || farma
+        const tColor = farma ? PHARM_GREEN : promo ? PINK_PROMO : pc
+        const tDark  = farma ? PHARM_DARK  : promo ? PINK_DARK  : DARK
+        const tBg    = farma ? PHARM_BG    : promo ? PINK_BG    : LIGHT
         const rowH  = tinted ? rH + 10 : rH
         if (i % 2 === 0) rect(page, M, tableY - 2 - (tinted ? 10 : 0), dataW, rowH, tBg)
         rect(page, c0 - 2, tableY - 1, 52, 13, tColor)
@@ -624,7 +624,7 @@ function drawCotizacionRoofing(
           drawStrike(page, c2, tableY + 3, `$${fmt(plan.original.valorAntesIvu)}`, 8, reg, GRAY)
           text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY - 8, bold, tDark)
           text(page, `$${fmt(plan.valorAntesIvu)}`,  8, c2, tableY - 8, bold, tDark)
-          if (drog) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
+          if (farma) drawCross(page, M + dataW - 12, tableY - 4, 3.5, PHARM_GREEN)
           else      drawHeart(page, M + dataW - 12, tableY - 4, 3.2, PINK_PROMO)
         } else {
           text(page, `$${fmt(plan.valorConIvu)}`,    8, c1, tableY + 3, bold, DARK)
@@ -1003,7 +1003,7 @@ function drawHeart(page: any, cx: number, cy: number, r: number, color: any) {
     page.drawEllipse({ x: cx, y: cy - r * 0.4, xScale: r * 0.85, yScale: r * 0.85, color })
   }
 }
-// Dibuja una cruz farmacéutica (símbolo + verde de droguería)
+// Dibuja una cruz farmacéutica (símbolo + verde de farmacia)
 function drawCross(page: any, cx: number, cy: number, r: number, color: any) {
   const arm = r * 1.6
   const thick = r * 0.6
