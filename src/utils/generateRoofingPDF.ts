@@ -468,25 +468,44 @@ function drawCotizacionRoofing(
     tableY -= bannerH + 6
   }
 
-  // ── Banner Promoción Farmacias ──────────────────────────────
+  // ── Banner Promoción Farmacias (con desglose de la resta) ─────
   if (resumen.farmacia) {
-    const bannerH = 26
+    const planesPromo = resumen.planes.filter(p => p.drogueria || p.original)
+    const lineCount = Math.max(1, planesPromo.length)
+    const bannerH = 32 + (lineCount * 10)
     rect(page, M, tableY - bannerH + 8, dataW, bannerH, PHARM_BG)
     page.drawRectangle({
       x: M, y: tableY - bannerH + 8, width: dataW, height: bannerH,
       borderColor: PHARM_GREEN, borderWidth: 1.4,
     })
-    // Cruces farmacéuticas a los lados
     drawCross(page, M + 12, tableY + 1, 6, PHARM_GREEN)
     drawCross(page, M + dataW - 18, tableY + 1, 6, PHARM_GREEN)
     const farmaTitle = lang === 'en'
-      ? `PHARMACY PROMOTION - ${resumen.farmacia.nombre.toUpperCase()} - ${resumen.farmacia.porcentaje}% OFF`
-      : `PROMOCION FARMACIAS - ${resumen.farmacia.nombre.toUpperCase()} - ${resumen.farmacia.porcentaje}% OFF`
+      ? `PHARMACY PROMOTION - ${resumen.farmacia.nombre.toUpperCase()} - 10% OFF`
+      : `PROMOCION FARMACIAS - ${resumen.farmacia.nombre.toUpperCase()} - 10% OFF`
     text(page, farmaTitle, 10, M + 26, tableY, bold, PHARM_DARK)
     const farmaSub = lang === 'en'
-      ? 'Discount applied to entire financing - Original price crossed out, new price in green'
-      : 'Descuento aplicado a todo el financiamiento - Precio original tachado, nuevo en verde'
+      ? 'Discount breakdown per plan (original - 10% = new price):'
+      : 'Desglose del descuento por plan (original - 10% = nuevo precio):'
     text(page, farmaSub, 6.5, M + 26, tableY - 12, reg, PHARM_DARK)
+
+    // Resta detallada por plan
+    let ly = tableY - 24
+    planesPromo.forEach(p => {
+      if (p.original) {
+        const orig = p.original.cashTotal
+        const desc = orig - p.cashTotal
+        text(page, `${p.nombre}:`, 7.5, M + 30, ly, bold, PHARM_DARK)
+        text(page, `$${fmt(orig)}`, 8, M + 100, ly, reg, DARK)
+        text(page, `−`, 9, M + 175, ly, bold, PHARM_GREEN)
+        text(page, `$${fmt(desc)}`, 8, M + 195, ly, bold, PHARM_GREEN)
+        text(page, `=`, 9, M + 270, ly, bold, PHARM_GREEN)
+        text(page, `$${fmt(p.cashTotal)}`, 9, M + 290, ly, bold, PHARM_DARK)
+        const ahorroLbl = lang === 'en' ? '(savings)' : '(ahorro)'
+        text(page, ahorroLbl, 6.5, M + 380, ly, reg, GRAY)
+        ly -= 10
+      }
+    })
     tableY -= bannerH + 6
   }
 

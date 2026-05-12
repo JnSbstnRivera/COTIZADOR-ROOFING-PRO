@@ -384,9 +384,9 @@ export default function App() {
   const [idiomaParaPDF, setIdiomaParaPDF] = useState<'es' | 'en'>('es');
   // Promo Mes de las Madres 2026: Platinum al precio de Gold (15% off)
   const [promoMadresPlatinum, setPromoMadresPlatinum] = useState<boolean>(false);
-  // Promoción Farmacias (descuento manual aplicado a todo el financiamiento)
-  const [farmacias, setFarmacias] = useState<{ activa: boolean; nombre: string; porcentaje: number }>({
-    activa: false, nombre: '', porcentaje: 0,
+  // Promoción Farmacias (descuento fijo 10% sobre todo el financiamiento)
+  const [farmacias, setFarmacias] = useState<{ activa: boolean; nombre: string }>({
+    activa: false, nombre: '',
   });
 
   // Safe lat/lng: fallback to PR center when field is empty or invalid (avoids Leaflet NaN crash)
@@ -681,9 +681,10 @@ export default function App() {
     [promoMadresPlatinum, data, platinumPlan, goldPlan]
   );
 
-  // Factor de descuento para promoción farmacias (multiplicador 1-X%)
-  const farmaActiva  = farmacias.activa && farmacias.porcentaje > 0 && farmacias.nombre.trim() !== '';
-  const farmaFactor  = farmaActiva ? (1 - farmacias.porcentaje / 100) : 1;
+  // Factor de descuento farmacias: 10% fijo
+  const farmaActiva  = farmacias.activa && farmacias.nombre.trim() !== '';
+  const FARMA_PCT    = 10;
+  const farmaFactor  = farmaActiva ? (1 - FARMA_PCT / 100) : 1;
 
   const roofingResumen = {
     sqft: data.sqft,
@@ -693,7 +694,7 @@ export default function App() {
       data.firmaYGana ? 'Firma y Gana (-$500)' : null,
       data.clienteVip ? 'Cliente VIP (-$1,000)' : null,
       promoMadresPlatinum ? 'Promo Mes de las Madres: Platinum al precio de Gold' : null,
-      farmaActiva ? `Promo Farmacia ${farmacias.nombre} (-${farmacias.porcentaje}%)` : null,
+      farmaActiva ? `Promo Farmacia ${farmacias.nombre} (-${FARMA_PCT}%)` : null,
     ].filter(Boolean).join(', ') || 'Ninguno',
     modalidades: modalidadesParaPDF,
     idioma:      idiomaParaPDF,
@@ -701,7 +702,7 @@ export default function App() {
     // Promo Farmacias a nivel resumen
     farmacia: farmaActiva ? {
       nombre:     farmacias.nombre.trim(),
-      porcentaje: farmacias.porcentaje,
+      porcentaje: FARMA_PCT,
     } : undefined,
     planes: calculations
       .filter(p => planesParaPDF.map(n => n.toUpperCase()).includes(p.name.toUpperCase()))
