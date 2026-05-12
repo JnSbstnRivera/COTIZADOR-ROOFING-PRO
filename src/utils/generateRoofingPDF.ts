@@ -469,17 +469,17 @@ function drawCotizacionRoofing(
     tableY -= bannerH + 6
   }
 
-  // ── Banner Promoción Farmacias (con desglose de la resta) ─────
+  // ── Banner Promoción Farmacias (con desglose explícito por plan) ─────
   if (resumen.farmacia) {
     const planesPromo = resumen.planes.filter(p => p.drogueria || p.original)
     const lineCount = Math.max(1, planesPromo.length)
-    const bannerH = 48 + (lineCount * 10)   // +16 para dar mucho aire arriba del título
+    const bannerH = 50 + (lineCount * 13)   // espacio para título + subtítulo + 1 línea por plan
     rect(page, M, tableY - bannerH + 8, dataW, bannerH, PHARM_BG)
     page.drawRectangle({
       x: M, y: tableY - bannerH + 8, width: dataW, height: bannerH,
       borderColor: PHARM_GREEN, borderWidth: 1.4,
     })
-    // titleY: baja el título 23pt respecto al borde superior del marco
+    // titleY: aire entre el marco superior y el título
     const titleY = tableY - 16
     drawCross(page, M + 12, titleY + 3, 6, PHARM_GREEN)
     drawCross(page, M + dataW - 18, titleY + 3, 6, PHARM_GREEN)
@@ -488,25 +488,28 @@ function drawCotizacionRoofing(
       : `PROMOCION FARMACIAS - ${resumen.farmacia.nombre.toUpperCase()} - 10% OFF`
     text(page, farmaTitle, 10, M + 26, titleY, bold, PHARM_DARK)
     const farmaSub = lang === 'en'
-      ? 'Discount breakdown per plan (original - 10% = new price):'
-      : 'Desglose del descuento por plan (original - 10% = nuevo precio):'
+      ? 'Discount applies to entire sealing financing - Breakdown per plan below'
+      : 'Descuento aplica a todo el financiamiento del sellado - Desglose por plan abajo'
     text(page, farmaSub, 6.5, M + 26, titleY - 12, reg, PHARM_DARK)
 
-    // Resta detallada por plan
-    let ly = titleY - 24
+    // Líneas por plan con formato: "PLATINUM (original): $X    Descuento 10%: $Y    = $Z"
+    const labelDesc10 = lang === 'en' ? 'Discount 10%:' : 'Descuento 10%:'
+    const lblOriginal = lang === 'en' ? '(original):' : '(original):'
+    let ly = titleY - 26
     planesPromo.forEach(p => {
       if (p.original) {
         const orig = p.original.cashTotal
         const desc = orig - p.cashTotal
-        text(page, `${p.nombre}:`, 7.5, M + 30, ly, bold, PHARM_DARK)
-        text(page, `$${fmt(orig)}`, 8, M + 100, ly, reg, DARK)
-        text(page, `−`, 9, M + 175, ly, bold, PHARM_GREEN)
-        text(page, `$${fmt(desc)}`, 8, M + 195, ly, bold, PHARM_GREEN)
-        text(page, `=`, 9, M + 270, ly, bold, PHARM_GREEN)
-        text(page, `$${fmt(p.cashTotal)}`, 9, M + 290, ly, bold, PHARM_DARK)
-        const ahorroLbl = lang === 'en' ? '(savings)' : '(ahorro)'
-        text(page, ahorroLbl, 6.5, M + 380, ly, reg, GRAY)
-        ly -= 10
+        // Plan + (original): + monto
+        text(page, `${p.nombre} ${lblOriginal}`,    8, M + 26,  ly, reg,  PHARM_DARK)
+        text(page, `$${fmt(orig)}`,                 9, M + 145, ly, bold, DARK)
+        // Descuento 10%: + monto
+        text(page, labelDesc10,                     8, M + 240, ly, reg,  PHARM_DARK)
+        text(page, `$${fmt(desc)}`,                 9, M + 325, ly, bold, PHARM_GREEN)
+        // = monto final
+        text(page, `=`,                            11, M + 420, ly, bold, PHARM_GREEN)
+        text(page, `$${fmt(p.cashTotal)}`,         10, M + 438, ly, bold, PHARM_DARK)
+        ly -= 13
       }
     })
     tableY -= bannerH + 6
