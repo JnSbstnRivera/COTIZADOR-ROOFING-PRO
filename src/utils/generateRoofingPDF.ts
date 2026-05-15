@@ -448,41 +448,41 @@ function drawCotizacionRoofing(
 
   // ── Banner Promo Mes de las Madres ───────────────────────────
   if (resumen.promoMadres) {
-    const bannerH = 38   // +16 para dar mucho aire arriba del título
+    const bannerH = 28   // compacto
     rect(page, M, tableY - bannerH + 8, dataW, bannerH, PINK_BG)
     page.drawRectangle({
       x: M, y: tableY - bannerH + 8, width: dataW, height: bannerH,
       borderColor: PINK_PROMO, borderWidth: 1.2,
     })
-    // titleY: baja el título 23pt respecto al borde superior del marco
-    const titleY = tableY - 15
-    drawHeart(page, M + 10, titleY + 4, 5, PINK_PROMO)
+    // titleY: aire mínimo arriba del título
+    const titleY = tableY - 8
+    drawHeart(page, M + 10, titleY + 3, 4.5, PINK_PROMO)
     const promoTxt = lang === 'en'
       ? 'MOTHER\'S DAY 2026 SPECIAL  -  Platinum at Gold price'
       : 'PROMO MES DE LAS MADRES 2026  -  Platinum al precio de Gold'
     text(page, promoTxt, 9.5, M + 22, titleY, bold, PINK_DARK)
-    drawHeart(page, M + dataW - 16, titleY + 4, 5, PINK_PROMO)
+    drawHeart(page, M + dataW - 16, titleY + 3, 4.5, PINK_PROMO)
     const validityTxt = lang === 'en'
       ? 'Valid May 7-14, 2026 - Showroom only'
       : 'Vigente 7-14 mayo 2026 - Solo en showroom'
-    text(page, validityTxt, 6.5, M + 22, titleY - 10, reg, PINK_DARK)
-    tableY -= bannerH + 6
+    text(page, validityTxt, 6.5, M + 22, titleY - 9, reg, PINK_DARK)
+    tableY -= bannerH + 4
   }
 
   // ── Banner Promoción Farmacias (con desglose explícito por plan) ─────
   if (resumen.farmacia) {
     const planesPromo = resumen.planes.filter(p => p.drogueria || p.original)
     const lineCount = Math.max(1, planesPromo.length)
-    const bannerH = 50 + (lineCount * 13)   // espacio para título + subtítulo + 1 línea por plan
+    const bannerH = 34 + (lineCount * 11)   // banner compacto
     rect(page, M, tableY - bannerH + 8, dataW, bannerH, PHARM_BG)
     page.drawRectangle({
       x: M, y: tableY - bannerH + 8, width: dataW, height: bannerH,
       borderColor: PHARM_GREEN, borderWidth: 1.4,
     })
-    // titleY: aire entre el marco superior y el título
-    const titleY = tableY - 16
-    drawCross(page, M + 12, titleY + 3, 6, PHARM_GREEN)
-    drawCross(page, M + dataW - 18, titleY + 3, 6, PHARM_GREEN)
+    // titleY: aire mínimo arriba del título
+    const titleY = tableY - 9
+    drawCross(page, M + 12, titleY + 3, 5, PHARM_GREEN)
+    drawCross(page, M + dataW - 18, titleY + 3, 5, PHARM_GREEN)
     const farmaTitle = lang === 'en'
       ? `PHARMACY PROMOTION - ${resumen.farmacia.nombre.toUpperCase()} - 10% OFF`
       : `PROMOCION FARMACIAS - ${resumen.farmacia.nombre.toUpperCase()} - 10% OFF`
@@ -490,12 +490,12 @@ function drawCotizacionRoofing(
     const farmaSub = lang === 'en'
       ? 'Discount applies to entire sealing financing - Breakdown per plan below'
       : 'Descuento aplica a todo el financiamiento del sellado - Desglose por plan abajo'
-    text(page, farmaSub, 6.5, M + 26, titleY - 12, reg, PHARM_DARK)
+    text(page, farmaSub, 6.5, M + 26, titleY - 9, reg, PHARM_DARK)
 
     // Líneas por plan con formato: "PLATINUM (original): $X    Descuento 10%: $Y    = $Z"
     const labelDesc10 = lang === 'en' ? 'Discount 10%:' : 'Descuento 10%:'
     const lblOriginal = lang === 'en' ? '(original):' : '(original):'
-    let ly = titleY - 26
+    let ly = titleY - 21
     planesPromo.forEach(p => {
       if (p.original) {
         const orig = p.original.cashTotal
@@ -509,10 +509,10 @@ function drawCotizacionRoofing(
         // = monto final
         text(page, `=`,                            11, M + 420, ly, bold, PHARM_GREEN)
         text(page, `$${fmt(p.cashTotal)}`,         10, M + 438, ly, bold, PHARM_DARK)
-        ly -= 13
+        ly -= 11
       }
     })
-    tableY -= bannerH + 6
+    tableY -= bannerH + 4
   }
 
   const rH   = 15
